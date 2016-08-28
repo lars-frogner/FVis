@@ -5,6 +5,11 @@
 # Default output folders
 /FVis_output_*
 
+# Auxiliary Latex files
+FVis_user_guide.*
+!FVis_user_guide.tex
+!FVis_user_guide.pdf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
