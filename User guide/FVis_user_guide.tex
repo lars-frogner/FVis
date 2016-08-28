@@ -1,0 +1,285 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{AST3310 Project 4\\Visualisation module user guide}
+
+\author{Lars Frogner}
+
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{verbatim}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{caption}
+\hypersetup{
+    colorlinks=true,     
+    urlcolor=blue,
+    linkcolor=blue,
+}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+
+\lstset{language=python}
+
+\lstset{backgroundcolor=\color{white}}
+\lstset{frame=none}
+
+\lstset{numbers=none}
+\lstset{numbersep=10pt}
+\lstset{numberstyle=\color{mygray}}
+
+\lstset{basicstyle=\ttfamily\small, basewidth=0.5em}
+\lstset{stringstyle=\ttfamily}
+\lstset{keywordstyle=\color{red}\bfseries}
+\lstset{commentstyle=\itshape\color{blue}}
+
+\lstset{showspaces=false}
+\lstset{showstringspaces=false}
+\lstset{showtabs=false}
+\lstset{breaklines=true}
+
+\lstset{aboveskip=20pt,belowskip=20pt}
+
+\newcommand{\ttt}[1]{\texttt{#1}}
+\newcommand{\ptype}[1]{\texttt{\textcolor{cyan}{#1}}}
+\newcommand{\cbl}[1]{\textcolor{blue}{#1}}
+\newcommand{\cro}[1]{\textcolor{RedOrange}{#1}}
+\newcommand{\cyo}[1]{\textcolor{YellowOrange}{#1}}
+
+\begin{document}
+
+\pagenumbering{gobble}
+
+\maketitle
+
+\newpage
+
+\tableofcontents
+
+\newpage
+\pagenumbering{arabic}
+
+\section{Introduction}
+\label{sec:intr}
+This guide describes the usage of the Python module \ttt{FVis.py}, which provides a simple way of saving and visualising the results of your fluid simulations.
+
+\section{Required packages}
+\label{sec:pack}
+The module requires \href{http://matplotlib.org/}{matplotlib} and \href{http://www.numpy.org/}{NumPy}. Make sure that both are updated to the latest version. For generating an mp4 file from an animation, \href{https://ffmpeg.org/}{FFmpeg} is required. Windows users can download it from the linked site. In order for matplotlib to find the FFmpeg executable, you must open the source code (\ttt{FVis.py}), and at the top specify the path to the folder that FFmpeg was downloaded to (you'll see where to put it once you open the file). For the latest versions of Ubuntu, FFmpeg should already be installed, and you can leave the path specification commented out.
+
+\section{What the module can do}
+\label{sec:cando}
+\begin{itemize}
+	\item Run your simulation for a given amount of time and save the resulting data to binary files.
+	\item Read data previously saved by the module.
+	\item Show a 1D or 2D animation of a quantity that can be derived from the stored data.
+	\item Save the animation as an mp4 file.
+	\item Plot the time evolution of the average value of a quantity (useful for checking if something is conserved).
+\end{itemize}
+
+\section{Getting started}
+\label{sec:start}
+Download \ttt{FVis.py} and keep it in the same directory as your simulation programme. At the top of your code, import the module by calling
+\begin{lstlisting}
+import FVis
+\end{lstlisting}
+Then, below all your simulation code, create an instance of the visualisation class by writing
+\begin{lstlisting}
+vis = FVis.FluidVisualiser()
+\end{lstlisting}
+\ttt{FluidVisualiser} is the only (public) class in the module, and you will be using the instance \ttt{vis} for every action you perform with the module. You are now almost ready to save some data, which is done with the method \ttt{save\_data}. But first there are a few requirements on your implementation that you must know about.
+
+\section{Requirements on your solver}
+\label{sec:req}
+Suppose you have written a 1D solver for the Navier-Stokes equations with no energy equation. Your primary variables would be density \ttt{rho} and velocity \ttt{u}, with the pressure \ttt{P} as a secondary variable. All of these must be represented as numpy arrays. You will provide the \ttt{save\_data} method with references to the arrays that you want to save.\\\\You will also need to have a function or method, let's call it \ttt{step}, that can advance the simulation by one time step and update the content of the arrays. \ttt{step} can take no arguments; it must have access to the arrays either as class attributes (highly recommended) or as global variables (not recommended). Here are examples for both cases:\\
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+# *** Class approach :) ***
+
+def step(self):
+
+	# <Calculate derivatives, find time step, set BCs etc..>
+
+	# Update attributes
+	self.rho[:] = ...
+	self.u[:] = ...
+	self.P[:] = ...
+
+	# Return time step
+	return dt
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+# *** Global approach :( ***
+
+def step():
+
+	global rho, u, P # Get access to the global variables
+
+	# <Calculate derivatives, find time step, set BCs etc..>
+
+	# Update global variables
+	rho[:] = ...
+	u[:] = ...
+	P[:] = ...
+
+	# Return time step
+	return dt
+\end{lstlisting}
+\end{minipage}
+\ttt{step} will also be provided to \ttt{save\_data}, which will call it in a loop to advance the simulation. The length of the time step must be returned, so that \ttt{save\_data} can keep track of the elapsed simulation time. Notice also the brackets after \ttt{rho}, \ttt{u} and \ttt{P}. They are required for \ttt{save\_data} to work. Here's why: Consider the two statements
+\begin{lstlisting}
+arr1 = arr2
+\end{lstlisting}
+and
+\begin{lstlisting}
+arr1[:] = arr2
+\end{lstlisting}
+The first statement basically says to take the memory allocated to \ttt{arr2} and label it \ttt{arr1}. The second one says to take the memory allocated to \ttt{arr2} and copy it's content into the memory allocated to \ttt{arr1}. See now why we have to use the second approach? Otherwise the references provided to \ttt{save\_data} initially will no longer point to the correct data after \ttt{step} is called. (Note that it doesn't have to be \ttt{[:]}, you could for instance have to set the internal values (\ttt{[1:-1]}) and the boundary points (\ttt{[0]}, \ttt{[-1]}) separately.)
+
+\section{Saving data}
+\label{sec:save}
+Say we now want to run our hypothetical 1D solver (implemented as a class) for 1000 simulation-seconds and save the contents of the arrays to file every other second. The syntax for this would be\\
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+# Create an instance of your solver class
+solver = MySolver(<arguments>)
+
+# <Call any methods from solver required for setting initial conditions>
+
+# Run simulation for 1000 seconds and save rho, u and P
+vis.save_data(1000, solver.step, rho=solver.rho, u=solver.u, P=solver.P, fps=0.5)
+\end{lstlisting}
+\end{minipage}
+The first argument to \ttt{save\_data} is the number of seconds to simulate. The second argument is the stepping function/method. Following that are a series of keyword arguments for the references to the arrays that are to be saved. Finally in this call we have specified the number of frames to save each second. A higher value for \ttt{fps} thus gives a finer time resolution for the saved data. A detailed list of possible arguments to \ttt{save\_data} can be found \hyperref[sec:sd]{here}.\\\\By default, the binary files containing the data are saved in a time stamped folder inside your working directory, but you can also specify a custom name with the keyword argument \ttt{folder='<My custom name>'}.
+
+\section{Animating}
+\label{sec:anim}
+Now that we have saved our precious data, it's time to visualise it. This is done with the method \ttt{animate\_1D} (or the corresponding 2D version \ttt{animate\_2D}). Here is a call that shows an animation of the density.
+\begin{lstlisting}
+vis.animate_1D('rho', folder='FVis_output_<yyyy_mm_dd_hh_MM>')
+\end{lstlisting}
+The first argument is a string describing the quantity to show. This can be any of the quantities that were saved (so \ttt{rho}, \ttt{u} or \ttt{P} for the case discussed above), or a derived quantity like horizontal momentum (\ttt{'ru'}) or pressure contrast (\ttt{'dP'}). A complete list of the possible quantities can be found \hyperref[sec:quants]{here}.\\\\The keyword argument \ttt{folder} in the above call specifies the name of the folder to read the binary files from. In this example the data is read from some default time stamped folder. If you want to animate data that was saved with the same \ttt{FluidVisualiser} instance (in the same running of the program), the folder name doesn't have to be specified since it is already known to the instance.\\\\There are a number of other keyword arguments available, all listed \hyperref[sec:anim1]{here} for \ttt{animate\_1D} and \hyperref[sec:anim2]{here} for \ttt{animate\_2D}.\\\\One thing to be aware of when creating 2D animations is that \ttt{animate\_2D} assumes that your arrays are indexed like matrices, in other words that the first index refers to the row (height) and the second index refers to the column (width). If you have done it the other way around, add the keyword argument \ttt{matrixLike=False} in \ttt{animate\_2D} so that your arrays can get transposed before they are shown. Also make sure that increasing an index corresponds to increasing the position coordinate, so if your simulation box spans $x\in[0, L_x], z\in[-L_z, 0]$, the index pair [0, 0] refers to the position $(x, z) = (0, -L_z)$.
+
+\section{Plotting time evolution}
+\label{sec:plot}
+If we for instance want to check whether mass is conserved in our simulation, we can use the \ttt{plot\_avg} method. It will calculate the average of some quantity over the entire simulation region for each time step, and produce a plot of the resulting time evolution. A call to it can look like this
+\begin{lstlisting}
+vis.plot_avg('rho', folder='FVis_output_<yyyy_mm_dd_hh_MM>')
+\end{lstlisting}
+All quantities that can be used with one of the animation methods (listed \hyperref[sec:quants]{here}) can also be used with \ttt{plot\_avg}. See \hyperref[sec:pa]{here} for additional keyword arguments.
+
+\section{Temporary visualisation}
+\label{sec:temp}
+If we are doing some quick and dirty testing of parameters and don't want to keep the data that gets produced, the method \ttt{delete\_current\_data} is our friend. As can be guessed from it's name, it deletes the data that was saved with the same instance of \ttt{FluidVisualiser} (again, in the same running of the program). Below is an example of it's usage.\\
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+# <Instantiate classes etc..>
+
+# Save 200 seconds worth of data
+vis.save_data(200, solver.step, rho=solver.rho, u=solver.u, P=solver.P)
+
+# Animate the pressure
+vis.animate_1D('P')
+
+# Delete the data after the animation window is closed
+vis.delete_current_data()
+\end{lstlisting}
+\end{minipage}
+You will be asked to confirm the deletion in the terminal window, so that you don't accidentally delete an hour's worth of data just because you forgot to comment out the deletion command.
+
+\section{Method argument descriptions}
+\label{sec:margs}
+\subsection{\ttt{FluidVisualiser}}
+\label{sec:const}
+\begin{itemize}
+	\item \ttt{\cro{printInfo}=\cbl{True}}: Type: \ptype{bool}.\\Whether to print info about execution to the terminal.
+\end{itemize}
+
+\subsection{\ttt{save\_data}}
+\label{sec:sd}
+\begin{itemize}
+	\item First argument: Types: \ptype{int}, \ptype{float}.\\Number of seconds to simulate.
+	\item Second argument: Type: \ptype{callable}.\\Function/method for advancing the simulation by a time step and updating arrays of the primary and secondary variables. Must take no input, and return the time step length.
+	\item \ttt{\cro{rho}=\cbl{None}}, \ttt{\cro{u}=\cbl{None}}, \ttt{\cro{w}=\cbl{None}}, \ttt{\cro{e}=\cbl{None}}, \ttt{\cro{P}=\cbl{None}}, \ttt{\cro{T}=\cbl{None}}: Type: \ptype{ndarray}.\\Arrays that get updated by the function/method given in the second argument, and that are to be saved. They specify density, horizontal velocity, vertical velocity, internal energy, pressure and temperature, respectively. They must all have the same shape. For 1D, whether \ttt{u} or \ttt{w} is specified determines the assumed direction (whether the horizontal axis should be labeled with \ttt{x} or \ttt{z}). \ttt{x} is assumed if no velocity (or both) is specified.
+	\item \ttt{\cro{Lx}=\cbl{None}}, \ttt{\cro{Lz}=\cbl{None}}: Types: \ptype{int}, \ptype{float}.\\Respectively width and height of simulation area, in metres. Used for labeling the animation. The area is assumed to span $x=[0, L_x]$ and/or $z=[-L_z, 0]$. For 2D, if not both are are provided, $L_z = 1$ Mm is assumed and $L_x$ is calculated from the aspect ratio of the array shape. For 1D, if the length of the assumed direction isn't provided it will be assumed to be 1 Mm.
+	\item \ttt{\cro{sim\_params}=\cbl{None}}: Type: \ptype{dict}\\Dictionary with parameter names (as dict keys) and their corresponding values (as dict values). The key/value pairs will be displayed on top of the simulation figure.
+	\item \ttt{\cro{t\_init}=0}: Types: \ptype{int}, \ptype{float}.\\What time the simulation is considered to start at.
+	\item \ttt{\cro{fps}=1}: Types: \ptype{int}, \ptype{float}.\\The number of times per simulation second to add the array content to file.
+	\item \ttt{\cro{useDblPrec}=\cbl{False}}: Type: \ptype{bool}.\\Whether to save the data as 64 bit float values rather than 32 bit.
+	\item \ttt{\cro{folder}=\cyo{'auto'}}: Type: \ptype{str}.\\Name of the folder to save the data in. By default the folder will be named \ttt{'FVis\_output\_<yyyy\_mm\_dd\_hh\_MM>'}, where the bracketed letters describe the date and time when the folder was created.
+\end{itemize}
+
+\subsection{\ttt{animate\_1D}}
+\label{sec:anim1}
+\begin{itemize}
+	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities below.
+	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\Name of the folder to save read the data from. The default value can only be used when the same instance has already been used to save data. Then the folder that the data was saved to will automatically be used.
+	\item \ttt{\cro{height}=7}: Types: \ptype{int}, \ptype{float}.\\The animation figure height.
+	\item \ttt{\cro{fps}=1}: Types: \ptype{int}, \ptype{float}.\\The number of times per simulation second to show an animation frame. Will not in practice be larger than the fps used to save the data, but any value is accepted.
+	\item \ttt{\cro{showDeviations}=\cbl{True}}: Type: \ptype{bool}.\\Whether to show labels with the relative difference between the current total mass and/or energy (whatever is available) and the initial total mass and/or energy.
+	\item \ttt{\cro{save}=\cbl{False}}: Type: \ptype{bool}.\\Whether to save the animation as an mp4 file rather than showing it.
+	\item \ttt{\cro{video\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\The number of seconds of simulation time that will be included in the saved mp4 file. Default value uses the number of seconds spanned by the saved data. If set to larger than this, the animation will restart from the initial time.
+	\item \ttt{\cro{aspect}=1.1}: Types: \ptype{int}, \ptype{float}.\\The aspect ratio of the animation window (width/height).
+	\item \ttt{\cro{title}=\cyo{'auto'}}: Type: \ptype{str}.\\Figure title to use. Default value will use the name of the quantity that is being visualised.
+\end{itemize}
+
+\subsection{\ttt{animate\_2D}}
+\label{sec:anim2}
+\begin{itemize}
+	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities below.
+	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{matrixLike}=\cbl{True}}: Type: \ptype{bool}.\\Whether the 2D arrays are indexed like matrices or not. If \ttt{[i, k]} refers to column \ttt{i} and row \ttt{k} in your arrays, set to false.
+	\item \ttt{\cro{height}=7}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{fps}=1}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{showDeviations}=\cbl{True}}: Type: \ptype{bool}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{showQuiver}=\cbl{True}}: Type: \ptype{bool}.\\Whether to show a quiver plot of the velocity field on top of the animation. Nothing will happen if not both velocity arrays are available.
+	\item \ttt{\cro{quiverscale}=1}: Types: \ptype{int}, \ptype{float}.\\Scaling factor for the quiver arrows. An initial scaling is done based on an estimation of the sound speed. This is a modifier for that scaling, so using e.g. 2 will double the length of the arrows. The arrow scale is displayed to the top right in the animation window. It shows the speed that an arrow represents if it has a length of 1 Mm.
+	\item \ttt{\cro{N\_arrows}=20}: Type: \ptype{int}.\\The number of quiver arrows to use in the vertical direction. The number in the horizontal direction is then found from the aspect ratio of the array shape. Warning: Using a lot of arrows can have a significant impact on performance.
+	\item \ttt{\cro{save}=\cbl{False}}: Type: \ptype{bool}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{video\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{aspect}=\cyo{'equal'}}: Types: \ptype{int}, \ptype{float}.\\The aspect ratio of the animation window (width/height). Default value uses the same aspect ratio as the array shape.
+	\item \ttt{\cro{title}=\cyo{'auto'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{interpolation}=\cyo{'none'}}: Type: \ptype{str}.\\The interpolation type to use for the animation frames. Examples are \ttt{bicubic} and \ttt{spline16}. By default no interpolation will take place. Warning: Interpolating can significantly impact performance, and can also hide useful information.
+	\item \ttt{\cro{cmap}=\cyo{'jet'}}: Type: \ptype{str}.\\The color map to use for the animation frames. Examples are \ttt{viridis} and \ttt{gray}.
+\end{itemize}
+
+\subsection{\ttt{plot\_avg}}
+\label{sec:pa}
+\begin{itemize}
+	\item First argument: Type: \ptype{str}.\\Which quantity to measure average of. See list of quantities below.
+	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{measure\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\The number of seconds of simulation time that will be included in the plot. Default value uses the number of seconds spanned by the saved data. If set to larger than this, the measuring will stop automatically.
+	\item \ttt{\cro{showTrendline}=\cbl{False}}: Type: \ptype{bool}.\\Whether to show a simple, linear trend line for the time evolution.
+\end{itemize}
+
+\section{Quantities that can be visualised}
+\label{sec:quants}
+\begin{itemize}
+	\item \ttt{\cyo{'rho'}}: Mass density, $\rho(\mathbf{r}, t)$, [kg/m$^3$].
+	\item \ttt{\cyo{'drho'}}: Mass density contrast, $(\rho(\mathbf{r}, t) - \rho(\mathbf{r}, 0))/\rho(\mathbf{r}, 0)$, [unitless].
+	\item \ttt{\cyo{'u'}}: Horizontal velocity, $u(\mathbf{r}, t)$, [m/s].
+	\item \ttt{\cyo{'w'}}: Vertical velocity, $w(\mathbf{r}, t)$, [m/s].
+	\item \ttt{\cyo{'e'}}: Internal energy density, $e(\mathbf{r}, t)$, [J/m$^3$].
+	\item \ttt{\cyo{'de'}}: Internal energy density contrast, $(e(\mathbf{r}, t) - e(\mathbf{r}, 0))/e(\mathbf{r}, 0)$, [unitless].
+	\item \ttt{\cyo{'es'}}: Specific internal energy, $e(\mathbf{r}, t)/\rho(\mathbf{r}, t)$, [J/kg].
+	\item \ttt{\cyo{'P'}}: Pressure, $P(\mathbf{r}, t)$, [Pa].
+	\item \ttt{\cyo{'dP'}}: Pressure contrast, $(P(\mathbf{r}, t) - P(\mathbf{r}, 0))/P(\mathbf{r}, 0)$, [unitless].
+	\item \ttt{\cyo{'T'}}: Temperature, $T(\mathbf{r}, t)$, [K].
+	\item \ttt{\cyo{'dT'}}: Temperature contrast, $(T(\mathbf{r}, t) - T(\mathbf{r}, 0))/T(\mathbf{r}, 0)$, [unitless].
+	\item \ttt{\cyo{'v'}}: Speed, $\sqrt{u(\mathbf{r}, t)^2 + w(\mathbf{r}, t)^2}$, [m/s].
+	\item \ttt{\cyo{'ru'}}: Horizontal momentum density, $\rho(\mathbf{r}, t)u(\mathbf{r}, t)$, [kg/sm$^2$].
+	\item \ttt{\cyo{'rw'}}: Vertical momentum density, $\rho(\mathbf{r}, t)w(\mathbf{r}, t)$, [kg/sm$^2$].
+	\item \ttt{\cyo{'rv'}}: Momentum density, $\rho(\mathbf{r}, t)\sqrt{u(\mathbf{r}, t)^2 + w(\mathbf{r}, t)^2}$, [kg/sm$^2$].
+	\item \ttt{\cyo{'eu'}}: Horizontal energy flux, $e(\mathbf{r}, t)u(\mathbf{r}, t)$, [W/m$^2$].
+	\item \ttt{\cyo{'ew'}}: Vertical energy flux, $e(\mathbf{r}, t)w(\mathbf{r}, t)$, [W/m$^2$].
+	\item \ttt{\cyo{'ev'}}: Energy flux, $e(\mathbf{r}, t)\sqrt{u(\mathbf{r}, t)^2 + w(\mathbf{r}, t)^2}$, [W/m$^2$].
+\end{itemize}
+
+\end{document}
