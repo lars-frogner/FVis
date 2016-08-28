@@ -75,7 +75,7 @@ class FluidVisualiser:
 		
 		for name in sim_params:
 
-			if not isinstance(name, str): raise TypeError('Keys in \'sim_params\' must be strings.')
+			if not isinstance(name, str): raise TypeError('Keys in \"sim_params\" must be strings.')
 
 
 		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds and saving %g frames per second to binary files ...\n' % (sim_time, fps)
@@ -188,7 +188,7 @@ class FluidVisualiser:
 
 			except TypeError:
 
-				raise TypeError('Input argument \'update_func\' must return the time step length (and nothing else).')
+				raise TypeError('Input argument \"update_func\" must return the time step length (and nothing else).')
 
 		if self.printInfo: print
 
@@ -240,7 +240,7 @@ class FluidVisualiser:
 		# Indicate that data was saved in this instance
 		self.hasSaved = True
 
-	def animate_1D(self, quantity, folder='default', height=7, fps=1, showDeviations=True, save=False, video_time='auto', aspect=1.1, title='auto'):
+	def animate_1D(self, quantity, folder='default', fps=1, showDeviations=True, height=7, aspect=1.1, title='auto', save=False, video_time='auto', video_name='auto'):
 
 		'Creates a 1D animation of the time evolution.'
 
@@ -250,11 +250,12 @@ class FluidVisualiser:
 
 			quantity = str(quantity)
 			folder = str(folder)
-			height = float(height)
 			fps = float(fps)
-			if video_time != 'auto': video_time = float(video_time)
+			height = float(height)
 			if aspect != 'auto': aspect = float(aspect)
 			title = str(title)
+			if video_time != 'auto': video_time = float(video_time)
+			video_name = str(video_name)
 
 		except ValueError:
 
@@ -351,17 +352,25 @@ class FluidVisualiser:
 
 		if save:
 
-			savename = '%s.mp4' % folder
-
 			if self.printInfo: print 'FluidVisualiser: Generating animation ...\n'
+
+			if video_name == 'auto':
+
+				video_name = folder
+
+				while os.path.exists(video_name + '.mp4'):
+
+					video_name += '_new'
+
+			video_name += '.mp4'
 
 			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True, frames=Nt)
 
 			t0 = time.time()
 
-			animation.save(savename, writer=matplotlib.animation.FFMpegWriter(fps=30, bitrate=3200, extra_args=['-vcodec', 'libx264']))
+			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=30, bitrate=3200, extra_args=['-vcodec', 'libx264']))
 
-			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % savename
+			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % video_name
 
 		else:
 
@@ -370,7 +379,7 @@ class FluidVisualiser:
 			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
 			plt.show()
 
-	def animate_2D(self, quantity, folder='default', matrixLike=True, height=7, fps=1, showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, save=False, video_time='auto', aspect='equal', title='auto', interpolation='none', cmap='jet'):
+	def animate_2D(self, quantity, matrixLike=True, folder='default', fps=1, showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, video_time='auto', video_name='auto'):
 
 		'Creates an animation of the time evolution.'
 
@@ -380,14 +389,16 @@ class FluidVisualiser:
 
 			quantity = str(quantity)
 			folder = str(folder)
-			height = float(height)
 			fps = float(fps)
 			quiverscale = float(quiverscale)
 			N_arrows = int(N_arrows)
-			if video_time != 'auto': video_time = float(video_time)
+			interpolation = str(interpolation)
+			cmap = str(cmap)
+			height = float(height)
 			if aspect != 'equal': aspect = float(aspect)
 			title = str(title)
-			interpolation = str(interpolation)
+			if video_time != 'auto': video_time = float(video_time)
+			video_name = str(video_name)
 
 		except ValueError:
 
@@ -506,17 +517,25 @@ class FluidVisualiser:
 
 		if save:
 
-			savename = '%s.mp4' % folder
-
 			if self.printInfo: print 'FluidVisualiser: Generating animation ...\n'
+
+			if video_name == 'auto':
+
+				video_name = folder
+
+				while os.path.exists(video_name + '.mp4'):
+
+					video_name += '_new'
+
+			video_name += '.mp4'
 
 			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True, frames=Nt)
 
 			t0 = time.time()
 
-			animation.save(savename, writer=matplotlib.animation.FFMpegWriter(fps=30, bitrate=3200, extra_args=['-vcodec', 'libx264']))
+			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=30, bitrate=3200, extra_args=['-vcodec', 'libx264']))
 
-			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % savename
+			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % video_name
 
 		else:
 
@@ -632,12 +651,12 @@ class FluidVisualiser:
 
 		else:
 
-			yn = raw_input('\nFluidVisualiser: Are you sure you want to delete the folder \'%s\' and all it\'s content? [Y/n] ' % (self.folder))
+			yn = raw_input('\nFluidVisualiser: Are you sure you want to delete the folder \"%s\" and all it\'s content? [Y/n] ' % (self.folder))
 
 			while not yn.lower() in ['y', 'n']:
 
-				print 'FluidVisualiser: Answer must be \'y\' (yes) or \'n\' (no).'
-				yn = raw_input('\nFluidVisualiser: Are you sure you want to delete the folder \'%s\' and all it\'s content? [Y/n] ' % (self.folder))
+				print 'FluidVisualiser: Answer must be \"y\" (yes) or \"n\" (no).'
+				yn = raw_input('\nFluidVisualiser: Are you sure you want to delete the folder \"%s\" and all it\'s content? [Y/n] ' % (self.folder))
 
 			if yn.lower() == 'y':
 
@@ -669,7 +688,7 @@ class FluidVisualiser:
 				os.chdir(cwd)
 				os.rmdir(self.folder)
 
-				print 'FluidVisualiser: All data in was \'%s\' deleted.' % (self.folder)
+				print 'FluidVisualiser: All data in was \"%s\" deleted.' % (self.folder)
 
 			else:
 
