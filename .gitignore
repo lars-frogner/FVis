@@ -1,3 +1,10 @@
+# Solvers for testing
+1D_solver.py
+2D_solver.py
+
+# Default output folders
+/FVis_output_*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
