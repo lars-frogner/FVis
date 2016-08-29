@@ -1,7 +1,7 @@
 '''
-Fvis v1.0.0
+Fvis v1.0.1
 
-Last updated: 28.08.2016
+Last updated: 29.08.2016
 
 Copyright (c) 2016 Lars Frogner
 '''
@@ -250,7 +250,7 @@ class FluidVisualiser:
 		# Indicate that data was saved in this instance
 		self.hasSaved = True
 
-	def animate_1D(self, quantity, folder='default', fps=1, showDeviations=True, height=7, aspect=1.1, title='auto', save=False, video_time='auto', video_name='auto'):
+	def animate_1D(self, quantity, folder='default', fps='auto', showDeviations=True, height=7, aspect=1.1, title='auto', save=False, video_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates a 1D animation of the time evolution.'
 
@@ -260,7 +260,7 @@ class FluidVisualiser:
 
 			quantity = str(quantity)
 			folder = str(folder)
-			fps = float(fps)
+			if fps != 'auto': fps = float(fps)
 			height = float(height)
 			if aspect != 'auto': aspect = float(aspect)
 			title = str(title)
@@ -322,7 +322,8 @@ class FluidVisualiser:
 
 		# *** Define function for updating animation ***
 
-		t_skip = 1.0/fps 	 # Time between each frame to render
+		if fps == 'auto': fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
+		t_skip = 1.0/(fps) 	 # Time between each frame to render
 		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if video_time == 'auto' else video_time)*fps)) # Total number of frames
 
 		# Initial values of total mass and energy density
@@ -378,7 +379,7 @@ class FluidVisualiser:
 
 			t0 = time.time()
 
-			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=30, bitrate=3200, extra_args=['-vcodec', 'libx264']))
+			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=video_fps, bitrate=3200, extra_args=['-vcodec', 'libx264']))
 
 			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % video_name
 
@@ -389,7 +390,7 @@ class FluidVisualiser:
 			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
 			plt.show()
 
-	def animate_2D(self, quantity, matrixLike=True, folder='default', fps=1, showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, video_time='auto', video_name='auto'):
+	def animate_2D(self, quantity, matrixLike=True, folder='default', fps='auto', showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, video_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates an animation of the time evolution.'
 
@@ -399,7 +400,7 @@ class FluidVisualiser:
 
 			quantity = str(quantity)
 			folder = str(folder)
-			fps = float(fps)
+			if fps != 'auto': fps = float(fps)
 			quiverscale = float(quiverscale)
 			N_arrows = int(N_arrows)
 			interpolation = str(interpolation)
@@ -475,7 +476,8 @@ class FluidVisualiser:
 
 
 		# *** Define function for updating animation ***
-
+		
+		if fps == 'auto': fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
 		t_skip = 1.0/fps 	 # Time between each frame to render
 		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if video_time == 'auto' else video_time)*fps)) # Total number of frames
 
@@ -543,7 +545,7 @@ class FluidVisualiser:
 
 			t0 = time.time()
 
-			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=30, bitrate=3200, extra_args=['-vcodec', 'libx264']))
+			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=video_fps, bitrate=3200, extra_args=['-vcodec', 'libx264']))
 
 			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % video_name
 
