@@ -29,7 +29,7 @@ class FluidVisualiser:
 		self.printInfo = printInfo
 		self.hasSaved = False
 
-	def save_data(self, sim_time, update_func, rho=None, u=None, w=None, e=None, P=None, T=None, Lx=None, Lz=None, sim_params=None, t_init=0, sim_fps=1, useDblPrec=False, folder='auto'):
+	def save_data(self, sim_time, update_func, rho=None, u=None, w=None, e=None, P=None, T=None, sim_fps=1, useDblPrec=False, sim_params=None, appendMode=False, folder='auto'):
 
 		'''
 		Advances the simulation by a given amount of time 
@@ -81,76 +81,122 @@ class FluidVisualiser:
 			raise ValueError('Invalid type for simulation time, fps or folder name.')
 
 		if not hasattr(update_func, '__call__'): raise TypeError('Input argument \"update_func\" must be a function or method.')
-		if not (sim_params is None) and not isinstance(sim_params, dict): raise TypeError('Input argument \"sim_params\" must be a dictionary.')
-		
-		for name in sim_params:
 
-			if not isinstance(name, str): raise TypeError('Keys in \"sim_params\" must be strings.')
+		if not (sim_params is None):
+
+			if not isinstance(sim_params, dict):
+
+				raise TypeError('Input argument \"sim_params\" must be a dictionary.')
+
+			for name in sim_params:
+
+				if not isinstance(name, str): raise TypeError('Keys in \"sim_params\" must be strings.')
 
 
-		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds and saving %g frames per second to binary files ...\n' % (sim_time, sim_fps)
+		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds and %s %g frames per second to binary files ...\n' % (sim_time, 'appending' if appendMode else 'saving', sim_fps)
 
-
-		# *** Create output folder ***
-
-		# Create a string of the current date and time (or use a user specified name)
-		now = datetime.datetime.now()
-		self.folder = folder if folder != 'auto' else ('FVis_output_' + now.strftime('%Y-%m-%d_%H-%M'))
-
-		# Use the string to create a unique folder and make it the current working directory
-
+		# Get current working directory
 		cwd = os.getcwd()
-		self.newfolder_count = 0
 
-		def create_folder():
-
-			try:
-
-				os.mkdir(self.folder)
-
-			except OSError as e:
-
-				if self.newfolder_count < 5:
-
-					self.folder += '_new'
-					self.newfolder_count += 1
-					create_folder()
-
-				else:
-
-					raise OSError(e)
-
-		# Keep adding _new to the name until it is unique
-		create_folder()
-
-		newdirpath = os.path.join(cwd, self.folder)
-		os.chdir(newdirpath)
-
-
-		# *** Initialize writer object instances ***
-
-		# Data type to write
-		dtype = 'f8' if useDblPrec else 'f4'
-
-		# Create instances of the _BinWriter class for writing the data
-
+		# Initialize dictionary for writer instances
 		arr_writers = {}
 
-		for name in input_arrs:
+		if appendMode:
 
-			arr_writers[name] = _BinWriter(name + '.pas', arr_shape, dtype)
+			# Make sure that the specified folder is present
 
-		time_writer = _BinWriter('time.pas', (2,), dtype)
+			if folder == 'auto':
+
+				raise ValueError('FluidVisualiser: Cannot use automatic folder naming in append mode. Please specify a folder.')
+
+			if not os.path.isdir(folder):
+
+				raise ValueError('FluidVisualiser: Cannot find the specified folder to append data in.')
+
+			# Check that all the necessary data is present and compatible with the inputted data
+
+			existing_arrs = self.get_last_data(folder)[0]
+
+			if existing_arrs.viewkeys() != input_arrs.viewkeys():
+
+				raise ValueError('FluidVisualiser: The set of inputted arrays doesn\'t correspond to the set of arrays in the folder.')
+
+			if existing_arrs.values()[0].shape != arr_shape:
+
+				raise ValueError('FluidVisualiser: The arrays to append don\'t have the same shape as the existing arrays.')
+
+			# Move to the folder to append data in
+			newdirpath = os.path.join(cwd, self.folder)
+			os.chdir(newdirpath)
+
+			# Create instances of the _BinAppender class for writing the data
+
+			for name in input_arrs:
+
+				arr_writers[name] = _BinAppender(name + '.pas', arr_shape)
+
+			time_writer = _BinAppender('time.pas', (2,))
+
+			t_init = self.t_list[-1]
+
+		else:
+
+			# Create output folder
+
+			# Create a string of the current date and time (or use a user specified name)
+			now = datetime.datetime.now()
+			self.folder = folder if folder != 'auto' else ('FVis_output_' + now.strftime('%Y-%m-%d_%H-%M'))
+
+			# Use the string to create a unique folder and make it the current working directory
+
+			self.newfolder_count = 0
+
+			def create_folder():
+
+				try:
+
+					os.mkdir(self.folder)
+
+				except OSError as e:
+
+					if self.newfolder_count < 5:
+
+						self.folder += '_new'
+						self.newfolder_count += 1
+						create_folder()
+
+					else:
+
+						raise OSError(e)
+
+			# Keep adding _new to the name until it is unique
+			create_folder()
+
+			newdirpath = os.path.join(cwd, self.folder)
+			os.chdir(newdirpath)
+
+			# Create instances of the _BinWriter class for writing the data
+
+			# Data type to write (only relevant when not appending)
+			dtype = 'f8' if useDblPrec else 'f4'
+
+			for name in input_arrs:
+
+				arr_writers[name] = _BinWriter(name + '.pas', arr_shape, dtype)
+
+			time_writer = _BinWriter('time.pas', (2,), dtype)
+
+			t_init = 0
+
+			# Write the initial data to the files
+			for name in input_arrs:
+
+				arr_writers[name].write_block(input_arrs[name])
+
+			time_writer.write_block([t_init, 0])
 
 
 		# *** Write data ***
-
-		# Write the initial data to the files
-		for name in input_arrs:
-
-			arr_writers[name].write_block(input_arrs[name])
-
-		time_writer.write_block([t_init, 0])
 
 		# Approximate time between each frame to save
 		t_skip = 1.0/sim_fps
@@ -178,7 +224,7 @@ class FluidVisualiser:
 
 				dt_avg = (t - t0)/skips
 
-				elapsed_time += t
+				elapsed_time += t - t_init
 
 				# Write the current data to the files
 
@@ -206,45 +252,57 @@ class FluidVisualiser:
 
 		if self.printInfo: print
 
-		# Close files
-		for name in input_arrs:
+		if appendMode:
 
-			arr_writers[name].end_write(printReport=self.printInfo)
+			# Close files
+			for name in input_arrs:
 
-		time_writer.end_write(printReport=self.printInfo)
+				arr_writers[name].end_append(printReport=self.printInfo)
 
-		# Write simulation parameters to a text file
+			time_writer.end_append(printReport=self.printInfo)
 
-		info = ''
+		else:
 
-		if not (Lx is None) and not (u is None): info += 'Lx = %g\n' % Lx
-		if not (Lz is None) and not (w is None): info += 'Lz = %g\n' % Lz
+			# Close files
+			for name in input_arrs:
 
-		for i in xrange(len(arr_names)):
+				arr_writers[name].end_write(printReport=self.printInfo)
 
-			info += 'has_%s = %d\n' % (arr_names[i], has_arr[i])
+			time_writer.end_write(printReport=self.printInfo)
 
-		def try_convert(val):
+			# Write simulation parameters to a text file
 
-			try:
+			info = ''
 
-				newval = '%g' % val
+			# Write which arrays were given
 
-			except TypeError:
+			for i in xrange(len(arr_names)):
 
-				newval = str(val)
+				info += 'has_%s = %d\n' % (arr_names[i], has_arr[i])
 
-			return newval
+			# Write parameters
 
-		if not (sim_params is None):
+			def try_convert(val):
 
-			for name in sorted(sim_params):
+				try:
 
-				info += name + ' = ' + try_convert(sim_params[name]) + '\n'
+					newval = '%g' % val
 
-		f = open('info.txt', 'w')
-		f.write(info[:-1])
-		f.close()
+				except TypeError:
+
+					newval = str(val)
+
+				return newval
+
+			if not (sim_params is None):
+
+				for name in sorted(sim_params):
+
+					info += name + ' = ' + try_convert(sim_params[name]) + '\n'
+
+			f = open('info.txt', 'w')
+			f.write(info[:-1])
+			f.close()
 
 		# Return to original working directory
 		os.chdir(cwd)
@@ -256,7 +314,7 @@ class FluidVisualiser:
 
 		if wasInterrupted: sys.exit()
 
-	def animate_1D(self, quantity, folder='default', anim_fps='auto', showDeviations=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
+	def animate_1D(self, quantity, folder='default', extent=[0, 1], anim_fps='auto', showDeviations=True, showParams=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates a 1D animation of the time evolution.'
 
@@ -273,10 +331,14 @@ class FluidVisualiser:
 			if anim_time != 'auto': anim_time = float(anim_time)
 			video_fps = float(video_fps)
 			video_name = str(video_name)
+			extent_unit = 'm' if len(extent) == 2 else str(extent[2])
+			extent = [float(extent[0]), float(extent[1])]
 
-		except ValueError:
+		except (ValueError, TypeError):
 
-			raise ValueError('Invalid type detected among the inputted parameters.')
+			raise TypeError('Invalid type detected among the inputted parameters.')
+
+
 
 		# Set valid folder name
 		self.__set_foldername(folder)
@@ -285,7 +347,7 @@ class FluidVisualiser:
 		# *** Prepare figure ***
 
 		# Get information required for displaying the given quantity
-		self.__read_header_data(forcedim=1)
+		self.__get_init_data(extent=extent)
 		q, name, unit = self.__get_quantity_info(quantity)
 		min_val, max_val = self.__get_optimal_scaling(q, includeAll=True)
 
@@ -299,20 +361,13 @@ class FluidVisualiser:
 		line, = ax.plot(self.l, q())
 
 		# Add figure info
-		textbox1, textbox2, textbox3 = self.__prepare_text(ax, dim=1)
+		textbox1, textbox2, textbox3 = self.__prepare_text(ax)
 		
 		# Set axis limits and labels
-
-		if self.direction == 'z':
-
-			ax.set_xlim(-self.extent, 0)
-
-		else:
-
-			ax.set_xlim(0, self.extent)
+		ax.set_xlim(extent[0], extent[1])
 
 		ax.set_ylim(min_val, max_val)
-		ax.set_xlabel(self.direction + ' [Mm]')
+		ax.set_xlabel(self.direction + ' [' + extent_unit + ']')
 		ax.set_ylabel(quantity + ('' if unit == '' else ' [%s]' % unit))
 		ax.set_title((name[0].upper() + name[1:]) if title == 'auto' else title)
 
@@ -321,7 +376,7 @@ class FluidVisualiser:
 
 		if anim_fps == 'auto': anim_fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
 		t_skip = 1.0/(anim_fps) 	 # Time between each frame to render
-		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if anim_time == 'auto' else anim_time)*anim_fps)) # Total number of frames
+		N_frames = int(np.floor((self.t_list[-1] if anim_time == 'auto' else anim_time)*anim_fps)) # Total number of frames
 
 		# Initial values of total mass and energy density
 		if self.has_arr['rho']: rho_tot0 = np.sum(self.arrs['rho'])
@@ -347,52 +402,17 @@ class FluidVisualiser:
 
 				textbox2.set_text(devi_text)
 
-			textbox3.set_text(self.param_text)
+			if showParams: textbox3.set_text(self.param_text)
 
 			# Print progress if generating a movie
-			if save: FluidVisualiser.__print_progress(i, Nt, t0)
+			if save: FluidVisualiser.__print_progress(i, N_frames, self.t0)
 
 			# Return figure content
 			return line, textbox1, textbox2, textbox3
 
+		self.__run_animation(fig, update, save, N_frames, video_fps, video_name)
 
-		# *** Create animation ***
-
-		if save:
-
-			if self.printInfo: print 'FluidVisualiser: Generating animation ...\n'
-
-			if video_name == 'auto':
-
-				video_name = self.folder
-
-			while os.path.exists(video_name + '.mp4'):
-
-				video_name += '_new'
-
-			video_name += '.mp4'
-
-			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True, frames=Nt)
-
-			t0 = time.time()
-
-			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=video_fps, bitrate=3200, extra_args=['-vcodec', 'libx264']))
-
-			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % video_name
-
-		else:
-
-			if self.printInfo: print 'FluidVisualiser: Playing animation ...'
-
-			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
-			plt.show()
-
-		# Close files
-		for reader in self.arr_readers.values():
-
-			reader.end_read()
-
-	def animate_2D(self, quantity, matrixLike=True, folder='default', anim_fps='auto', showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
+	def animate_2D(self, quantity, matrixLike=True, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showDeviations=True, showParams=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates an animation of the time evolution.'
 
@@ -413,10 +433,12 @@ class FluidVisualiser:
 			if anim_time != 'auto': anim_time = float(anim_time)
 			video_fps = float(video_fps)
 			video_name = str(video_name)
+			extent_unit = 'm' if len(extent) == 4 else str(extent[4])
+			extent = [float(extent[0]), float(extent[1]), float(extent[2]), float(extent[3])]
 
-		except ValueError:
+		except (ValueError, TypeError):
 
-			raise ValueError('Invalid type detected among the inputted parameters.')
+			raise TypeError('Invalid type detected among the inputted parameters.')
 
 		# Set valid folder name
 		self.__set_foldername(folder)
@@ -424,7 +446,7 @@ class FluidVisualiser:
 		# *** Prepare figure ***
 
 		# Get information required for displaying the given quantity
-		self.__read_header_data(forcedim=2, matrixLike=matrixLike)
+		self.__get_init_data(extent=extent, matrixLike=matrixLike)
 		q, name, unit = self.__get_quantity_info(quantity)
 		min_val, max_val = self.__get_optimal_scaling(q)
 
@@ -439,8 +461,7 @@ class FluidVisualiser:
 		# Create image for fluid
 		img = ax.imshow(q() if matrixLike else q().T, origin='lower', norm=plt.Normalize(min_val, max_val),
 							 cmap=plt.get_cmap(cmap), interpolation=interpolation, 
-							 extent=[0, self.extent_x, -self.extent_z, 0], aspect='auto',
-							 animated=True)
+							 extent=extent, aspect='auto', animated=True)
 
 		# Create quiver plot
 		if not (self.has_arr['u'] and self.has_arr['w']): showQuiver = False
@@ -450,10 +471,10 @@ class FluidVisualiser:
 		textbox1, textbox2, textbox3 = self.__prepare_text(ax)
 		
 		# Set axis limits and labels
-		ax.set_xlim(0, self.extent_x)
-		ax.set_ylim(-self.extent_z, 0)
-		ax.set_xlabel('x [Mm]')
-		ax.set_ylabel('z [Mm]')
+		ax.set_xlim(extent[0], extent[1])
+		ax.set_ylim(extent[2], extent[3])
+		ax.set_xlabel('x [' + extent_unit + ']')
+		ax.set_ylabel('z [' + extent_unit + ']')
 		ax.set_title((name[0].upper() + name[1:]) if title == 'auto' else title, y=1.05)
 
 		# Display colorbar
@@ -469,9 +490,9 @@ class FluidVisualiser:
 
 		# *** Define function for updating animation ***
 		
-		if anim_fps == 'auto': anim_fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
+		if anim_fps == 'auto': anim_fps = float(self.Nt)/self.t_list[-1]
 		t_skip = 1.0/anim_fps 	 # Time between each frame to render
-		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if anim_time == 'auto' else anim_time)*anim_fps)) # Total number of frames
+		N_frames = int(np.floor((self.t_list[-1] if anim_time == 'auto' else anim_time)*anim_fps)) # Total number of frames
 
 		# Initial values of total mass and energy density
 		if self.has_arr['rho']: rho_tot0 = np.sum(self.arrs['rho'])
@@ -508,50 +529,15 @@ class FluidVisualiser:
 
 				textbox2.set_text(devi_text)
 
-			textbox3.set_text(self.param_text)
+			if showParams: textbox3.set_text(self.param_text)
 
 			# Print progress if generating a movie
-			if save: FluidVisualiser.__print_progress(i, Nt, t0)
+			if save: FluidVisualiser.__print_progress(i, N_frames, self.t0)
 
 			# Return figure content
 			return img, quiver, textbox1, textbox2, textbox3
 
-
-		# *** Create animation ***
-
-		if save:
-
-			if self.printInfo: print 'FluidVisualiser: Generating animation ...\n'
-
-			if video_name == 'auto':
-
-				video_name = self.folder
-
-			while os.path.exists(video_name + '.mp4'):
-
-				video_name += '_new'
-
-			video_name += '.mp4'
-
-			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True, frames=Nt)
-
-			t0 = time.time()
-
-			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=video_fps, bitrate=3200, extra_args=['-vcodec', 'libx264']))
-
-			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % video_name
-
-		else:
-
-			if self.printInfo: print 'FluidVisualiser: Playing animation ...'
-
-			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
-			plt.show()
-
-		# Close files
-		for reader in self.arr_readers.values():
-
-			reader.end_read()
+		self.__run_animation(fig, update, save, N_frames, video_fps, video_name)
 
 	def plot_avg(self, quantity, folder='default', measure_time='auto', showTrendline=False):
 
@@ -575,8 +561,7 @@ class FluidVisualiser:
 
 		# *** Simulate and measure values ***
 
-		# Read header data
-		self.__read_header_data()
+		self.__get_init_data()
 
 		# Get function returning the quantity
 		q, name = self.__get_quantity_info(quantity)[:2]
@@ -585,7 +570,7 @@ class FluidVisualiser:
 		t_list = [self.t]
 		q_list = [np.sum(q())]
 
-		measure_time = (self.t_list[-1] - self.t_list[0]) if measure_time == 'auto' else measure_time
+		measure_time = self.t_list[-1] if measure_time == 'auto' else measure_time
 
 		# Approximate amount of time between each data point
 		t_step = measure_time/500.0
@@ -614,9 +599,7 @@ class FluidVisualiser:
 			q_list.append(np.sum(q()))
 
 		# Close files
-		for reader in self.arr_readers.values():
-
-			reader.end_read()
+		self.__close_read_files()
 
 		if self.printInfo: print '\n\nFluidVisualiser: Plotting time evolution of average %s ...' % name
 
@@ -631,11 +614,11 @@ class FluidVisualiser:
 
 		trendline = a*np.array(t_list) + delta_q[0]
 
-		plt.plot(t_list, delta_q, 'b-', label='data')
+		plt.plot(t_list, delta_q, 'b-', label='Data')
 
 		if showTrendline:
 			plt.hold('on')
-			plt.plot(t_list, trendline, 'g-', label='trend')
+			plt.plot(t_list, trendline, 'g-', label='Trendline')
 			plt.legend(loc='best')
 
 		plt.title('Time evolution of average %s (relative to %s value)' % (name, 'mean' if q_list[0] == 0 else 'initial'))
@@ -692,13 +675,13 @@ class FluidVisualiser:
 				os.chdir(cwd)
 				os.rmdir(self.folder)
 
-				print 'FluidVisualiser: All data in was \"%s\" deleted.' % (self.folder)
+				print 'FluidVisualiser: All data in \"%s\" was deleted.' % (self.folder)
 
 			else:
 
 				print 'FluidVisualiser: No data deleted.'
 
-	def get_last_data(self, folder='default'):
+	def get_last_data(self, folder):
 
 		'''
 		Reads the last arrays in the files of the given folder
@@ -709,46 +692,83 @@ class FluidVisualiser:
 		self.__set_foldername(folder)
 
 		# Set attributes required for reading the data
-		self.__prepare_arr_readers()
+		self.__get_init_data()
 
 		# Read the last arrays in the files
 		self.__get_data_blocks(self.Nt - 1)
 
 		# Close files
-		for reader in self.arr_readers.values():
+		self.__close_read_files()
 
-			reader.end_read()
+		# Create a dictionary of simulation parameters
 
-		# Move back to previous working directory
-		os.chdir(self.cwd)
+		out_params = {param_line.split(' = ')[0]:param_line.split(' = ')[1] for param_line in self.param_text.split('\n')}
 
-		# Return data
-		return self.arrs, self.t_list[-1]
+		# Return data and parameters
+		return self.arrs, out_params
 
 	# Private methods
 
-	def __prepare_arr_readers(self):
+	def __run_animation(self, fig, update, save, N_frames, video_fps, video_name):
+
+		'Create an appropriate animation instance and run the animation procedure.'
+
+		if save:
+
+			if self.printInfo: print 'FluidVisualiser: Generating animation ...\n'
+
+			if video_name == 'auto':
+
+				video_name = self.folder
+
+			while os.path.exists(video_name + '.mp4'):
+
+				video_name += '_new'
+
+			video_name += '.mp4'
+
+			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True, frames=N_frames)
+
+			self.t0 = time.time()
+
+			animation.save(video_name, writer=matplotlib.animation.FFMpegWriter(fps=video_fps, bitrate=3200, extra_args=['-vcodec', 'libx264']))
+
+			if self.printInfo: print '\n\nFluidVisualiser: Animation saved as \"%s\".' % video_name
+
+		else:
+
+			if self.printInfo: print 'FluidVisualiser: Playing animation ...'
+
+			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
+			plt.show()
+
+		# Close files
+		self.__close_read_files()
+
+	def __get_init_data(self, extent=False, matrixLike=True):
 
 		'''
-		Read the info file in the saved folder and define 
+		Read the info file and headers in the saved folder and define 
 		attributes required for reading the data.
 		'''
 
 		# *** Move to the folder containing the binary files to read ***
 
-		self.cwd = os.getcwd()
-		newdirpath = os.path.join(self.cwd, self.folder)
+		cwd = os.getcwd()
+		newdirpath = os.path.join(cwd, self.folder)
 		os.chdir(newdirpath)
 
 
-		# *** Read the file containing simulation parameters ***
+		# *** Get simulation parameters ***
+
+		arr_names = ['rho', 'u', 'w', 'e', 'P', 'T']
 
 		f = open('info.txt', 'r')
 		self.lines = f.readlines()
 		f.close()
 
-		arr_names = ['rho', 'u', 'w', 'e', 'P', 'T']
-		self.has_arr = {name:bool(self.__search_info('has_' + name)) for name in arr_names}
+		self.has_arr = {arr_names[i]:bool(int(self.lines[i].split(' = ')[1])) for i in xrange(6)}
+		self.param_text = ''.join(self.lines[6:])
 
 
 		# *** Create _BinReader instances for reading the data ***
@@ -777,97 +797,44 @@ class FluidVisualiser:
 		self.t_list[1:] = self.t_list[0] + np.cumsum(self.dt_avg_list*self.skips_list)
 		self.Nt = len(self.t_list)
 
-	def __read_header_data(self, forcedim=False, matrixLike=True):
-
-		'Gets simulation parameters from files in a given folder.'
-
-		# Set attributes required for reading the data
-		self.__prepare_arr_readers()
-
-
-		# *** Set fluid properties ***
-
-		for i in xrange(len(self.lines)):
-
-			if self.lines[i].split(' = ')[0] == 'has_T': param_start_idx = i + 1
-
-		self.param_text = ''.join(self.lines[param_start_idx:])
-
 		# Set initial conditons
 		self.__set_initial_conditions()
 
-		dim = len(self.arrs.values()[0].shape)
+		self.dim = len(self.arrs.values()[0].shape)
 
-		if forcedim and forcedim != dim:
-
-			raise ValueError('Can\'t make a %dD animation for %dD data.' %(forcedim, dim))
+		# Move back to previous working directory
+		os.chdir(cwd)
 
 
 		# *** Set numerical quantities ***
 
-		if dim == 2:
+		if extent:
 
-			self.Nx = self.arrs.values()[0].shape[1 if matrixLike else 0] 	 # Number of horizontal grid points
-			self.Nz = self.arrs.values()[0].shape[0 if matrixLike else 1] 	 # Number of vertical grid points
+			if self.dim != len(extent)/2:
 
-			self.Lz = self.__search_info('Lz') 		 # Vertical length of simulation area
-			self.Lx = self.__search_info('Lx')		 # Horizontal length of simulation area
+				raise ValueError('Can\'t make a %dD animation for %dD data.' %(len(extent)/2, self.dim))
 
-			self.equal_aspect = float(self.Nx)/self.Nz
+			if self.dim == 2:
 
+				self.Nx = self.arrs.values()[0].shape[1 if matrixLike else 0] 	 # Number of horizontal grid points
+				self.Nz = self.arrs.values()[0].shape[0 if matrixLike else 1] 	 # Number of vertical grid points
 
-			# *** Set extent of simulation box ***
+				self.equal_aspect = float(self.Nx)/self.Nz
 
-			if (self.Lx is None) or (self.Lz is None):
+				# Arrays of grid points
+				self.x, self.z = np.meshgrid(np.linspace(extent[0], extent[1], self.Nx), np.linspace(extent[2], extent[3], self.Nz))
 
-				self.extent_x = self.equal_aspect
-				self.extent_z = 1.0
+			elif self.dim == 1:
+
+				self.N = self.arrs.values()[0].shape[0]
+
+				self.direction = 'z' if self.has_arr['w'] else 'x'
+
+				self.l = np.linspace(extent[0], extent[1], self.N)
 
 			else:
 
-				self.extent_x = self.Lx*1e-6
-				self.extent_z = self.Lz*1e-6
-
-
-			# Arrays of grid points
-			self.x, self.z = np.meshgrid(np.linspace(0, self.extent_x, self.Nx), np.linspace(-self.extent_z, 0, self.Nz))
-
-		elif dim == 1:
-
-			self.N = self.arrs.values()[0].shape[0]
-
-			self.direction = 'z' if self.has_arr['w'] else 'x'
-			self.L = self.__search_info('L%s' % (self.direction))
-
-			self.extent = 1.0 if self.L is None else self.L*1e-6
-
-			self.l = np.linspace(-self.extent, 0, self.N) if self.direction == 'z' else np.linspace(0, self.extent, self.N)
-
-		else:
-
-			raise ValueError('Invalid dimension of data files.')
-
-		# Move back to previous working directory
-		os.chdir(self.cwd)
-
-	def __search_info(self, substr):
-
-		'''
-		Function for getting the value of a given parameter 
-		from the lines of the "info.txt" file.
-		'''
-
-		val = None
-
-		for line in self.lines:
-
-			subline = line.split(' = ')
-
-			if subline[0] == substr:
-
-				val = float(subline[1])
-
-		return val
+				raise ValueError('Invalid dimension of data files.')
 
 	def __get_data_blocks(self, i):
 
@@ -885,6 +852,14 @@ class FluidVisualiser:
 
 		self.t_i = 0
 		self.__get_data_blocks(self.t_i)
+
+	def __close_read_files(self):
+
+		'Close binary files that has been read from.'
+
+		for reader in self.arr_readers.values():
+
+			reader.end_read()
 
 	def __step_time(self, min_t_skip):
 
@@ -1172,7 +1147,7 @@ class FluidVisualiser:
 
 		return min_val, max_val
 
-	def __get_quiver(self, ax, N_arrows, scale, showQuiver):
+	def __get_quiver(self, ax, N_arrows, quiverscale, showQuiver):
 
 		'Creates a quiver object for visualising the velocity field.'
 
@@ -1206,13 +1181,13 @@ class FluidVisualiser:
 
 				cs_approx = 17000.0
 
-			arrscale = 0.2*N_arrows*cs_approx/scale
+			arrscale = 0.2*N_arrows*cs_approx/quiverscale
 
 			# Create quiver plot
 			quiver = ax.quiver(x_q, z_q, x_q, z_q, units='height', scale=arrscale, width=0.003, color='k')
 
 			# Add text with arrow scale
-			arrowtext = 'Arrow scale = %g (m/s)/Mm' % (arrscale/self.extent_z)
+			arrowtext = 'Arrow scale = %g (m/s)/m' % (arrscale/(self.z[-1, 0] - self.z[0, 0]))
 
 			ax.text(0.995, 1.005, arrowtext, color='k', fontsize=11, horizontalalignment='right', 
 										     verticalalignment='bottom', transform=ax.transAxes)
@@ -1226,7 +1201,7 @@ class FluidVisualiser:
 
 		return step_q, quiver
 
-	def __prepare_text(self, ax, dim=2):
+	def __prepare_text(self, ax):
 
 		'Sets up textboxes for updateable info.'
 
@@ -1242,12 +1217,12 @@ class FluidVisualiser:
 
 		# Display number of data points above the animation
 
-		if dim == 2:
+		if self.dim == 2:
 
 			ax.text(0.005, 1.005, 'Nx = %d, Nz = %d' % (self.Nx, self.Nz), color='k', fontsize=11, horizontalalignment='left', 
 										     							   verticalalignment='bottom', transform=ax.transAxes)
 
-		elif dim == 1:
+		elif self.dim == 1:
 
 			ax.text(0.005, 1.005, 'N = %d' % (self.N), color='k', fontsize=11, horizontalalignment='left', 
 										     		   verticalalignment='bottom', transform=ax.transAxes)
@@ -1769,7 +1744,7 @@ class _BinAppender(_Restrictor, _BinWriter, _BinReader):
 	method "write_block", inherited from the _BinWriter class.
 	'''
 
-	def __init__(self, filename, block_shape, dtype_dbytes):
+	def __init__(self, filename, block_shape):
 
 		'Opens a binary file, reads the header and prepares to append data to the file.'
 
@@ -1785,12 +1760,6 @@ class _BinAppender(_Restrictor, _BinWriter, _BinReader):
 
 			print '_BinAppender error (\"%s\"): Input block shape [%s] must match that of the blocks already written to the file [%s].' \
 				  % (self.filename, _Common.get_shape_string(np.asarray(block_shape, dtype='i4')), self.block_shape)
-			sys.exit()
-
-		if dtype_dbytes != self.dtype_dbytes:
-
-			print '_BinAppender error (\"%s\"): Input data type and precision (\"%s\") must match that of the blocks already written to the file (\"%s\").' \
-				  % (self.filename, dtype_dbytes, self.dtype_dbytes)
 			sys.exit()
 
 		if self.packtype.upper() != 'C':
