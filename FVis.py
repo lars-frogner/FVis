@@ -29,7 +29,7 @@ class FluidVisualiser:
 		self.printInfo = printInfo
 		self.hasSaved = False
 
-	def save_data(self, sim_time, update_func, rho=None, u=None, w=None, e=None, P=None, T=None, Lx=None, Lz=None, sim_params=None, t_init=0, fps=1, useDblPrec=False, folder='auto'):
+	def save_data(self, sim_time, update_func, rho=None, u=None, w=None, e=None, P=None, T=None, Lx=None, Lz=None, sim_params=None, t_init=0, sim_fps=1, useDblPrec=False, folder='auto'):
 
 		'''
 		Advances the simulation by a given amount of time 
@@ -73,7 +73,7 @@ class FluidVisualiser:
 		try:
 
 			sim_time = float(sim_time)
-			fps = float(fps)
+			sim_fps = float(sim_fps)
 			folder = str(folder)
 
 		except ValueError:
@@ -88,7 +88,7 @@ class FluidVisualiser:
 			if not isinstance(name, str): raise TypeError('Keys in \"sim_params\" must be strings.')
 
 
-		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds and saving %g frames per second to binary files ...\n' % (sim_time, fps)
+		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds and saving %g frames per second to binary files ...\n' % (sim_time, sim_fps)
 
 
 		# *** Create output folder ***
@@ -153,11 +153,13 @@ class FluidVisualiser:
 		time_writer.write_block([t_init, 0])
 
 		# Approximate time between each frame to save
-		t_skip = 1.0/fps
+		t_skip = 1.0/sim_fps
 		elapsed_time = 0
 
 		# Start measuring elapsed time
 		start_time = time.time()
+
+		wasInterrupted = False
 
 		while elapsed_time < sim_time:
 
@@ -186,15 +188,17 @@ class FluidVisualiser:
 
 				time_writer.write_block([dt_avg, skips])
 
+				if wasInterrupted: break
+
 				# Print progress
 				if self.printInfo: FluidVisualiser.__print_progress(elapsed_time, sim_time, start_time)
 
 			# If aborted by user, exit the loop and finish up the writing
 			except KeyboardInterrupt:
 
-				if self.printInfo: print '\nFluidVisualiser: Writing interrupted by user. Aborting ...'
+				if self.printInfo: print '\n\nFluidVisualiser: Writing interrupted by user. Aborting ...'
 
-				break
+				wasInterrupted = True
 
 			except TypeError:
 
@@ -250,7 +254,7 @@ class FluidVisualiser:
 		# Indicate that data was saved in this instance
 		self.hasSaved = True
 
-	def animate_1D(self, quantity, folder='default', fps='auto', showDeviations=True, height=7, aspect=1.1, title='auto', save=False, video_time='auto', video_fps=30, video_name='auto'):
+	def animate_1D(self, quantity, folder='default', anim_fps='auto', showDeviations=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates a 1D animation of the time evolution.'
 
@@ -260,11 +264,12 @@ class FluidVisualiser:
 
 			quantity = str(quantity)
 			folder = str(folder)
-			if fps != 'auto': fps = float(fps)
+			if anim_fps != 'auto': anim_fps = float(anim_fps)
 			height = float(height)
 			if aspect != 'auto': aspect = float(aspect)
 			title = str(title)
-			if video_time != 'auto': video_time = float(video_time)
+			if anim_time != 'auto': anim_time = float(anim_time)
+			video_fps = float(video_fps)
 			video_name = str(video_name)
 
 		except ValueError:
@@ -322,9 +327,9 @@ class FluidVisualiser:
 
 		# *** Define function for updating animation ***
 
-		if fps == 'auto': fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
-		t_skip = 1.0/(fps) 	 # Time between each frame to render
-		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if video_time == 'auto' else video_time)*fps)) # Total number of frames
+		if anim_fps == 'auto': anim_fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
+		t_skip = 1.0/(anim_fps) 	 # Time between each frame to render
+		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if anim_time == 'auto' else anim_time)*anim_fps)) # Total number of frames
 
 		# Initial values of total mass and energy density
 		if self.has_arr['rho']: rho_tot0 = np.sum(self.arrs['rho'])
@@ -390,7 +395,7 @@ class FluidVisualiser:
 			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
 			plt.show()
 
-	def animate_2D(self, quantity, matrixLike=True, folder='default', fps='auto', showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, video_time='auto', video_fps=30, video_name='auto'):
+	def animate_2D(self, quantity, matrixLike=True, folder='default', anim_fps='auto', showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates an animation of the time evolution.'
 
@@ -400,7 +405,7 @@ class FluidVisualiser:
 
 			quantity = str(quantity)
 			folder = str(folder)
-			if fps != 'auto': fps = float(fps)
+			if anim_fps != 'auto': anim_fps = float(anim_fps)
 			quiverscale = float(quiverscale)
 			N_arrows = int(N_arrows)
 			interpolation = str(interpolation)
@@ -408,7 +413,8 @@ class FluidVisualiser:
 			height = float(height)
 			if aspect != 'equal': aspect = float(aspect)
 			title = str(title)
-			if video_time != 'auto': video_time = float(video_time)
+			if anim_time != 'auto': anim_time = float(anim_time)
+			video_fps = float(video_fps)
 			video_name = str(video_name)
 
 		except ValueError:
@@ -477,9 +483,9 @@ class FluidVisualiser:
 
 		# *** Define function for updating animation ***
 		
-		if fps == 'auto': fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
-		t_skip = 1.0/fps 	 # Time between each frame to render
-		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if video_time == 'auto' else video_time)*fps)) # Total number of frames
+		if anim_fps == 'auto': anim_fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
+		t_skip = 1.0/anim_fps 	 # Time between each frame to render
+		Nt = int(np.floor(((self.t_list[-1] - self.t_list[0]) if anim_time == 'auto' else anim_time)*anim_fps)) # Total number of frames
 
 		# Initial values of total mass and energy density
 		if self.has_arr['rho']: rho_tot0 = np.sum(self.arrs['rho'])
