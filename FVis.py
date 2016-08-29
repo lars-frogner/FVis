@@ -254,6 +254,8 @@ class FluidVisualiser:
 		# Indicate that data was saved in this instance
 		self.hasSaved = True
 
+		if wasInterrupted: sys.exit()
+
 	def animate_1D(self, quantity, folder='default', anim_fps='auto', showDeviations=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates a 1D animation of the time evolution.'
@@ -394,6 +396,11 @@ class FluidVisualiser:
 
 			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
 			plt.show()
+
+		# Close files
+		for reader in self.arrs_readers.values():
+
+			reader.end_read()
 
 	def animate_2D(self, quantity, matrixLike=True, folder='default', anim_fps='auto', showDeviations=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
@@ -562,6 +569,11 @@ class FluidVisualiser:
 			animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
 			plt.show()
 
+		# Close files
+		for reader in self.arrs_readers.values():
+
+			reader.end_read()
+
 	def plot_avg(self, quantity, folder='default', measure_time='auto', showTrendline=False):
 
 		'Plots the time evolution of the average of a given quantity.'
@@ -631,6 +643,11 @@ class FluidVisualiser:
 			# Store time and quantity data
 			t_list.append(self.t)
 			q_list.append(np.sum(q()))
+
+		# Close files
+		for reader in self.arrs_readers.values():
+
+			reader.end_read()
 
 		if self.printInfo: print '\n\nFluidVisualiser: Plotting time evolution of average %s ...' % name
 
