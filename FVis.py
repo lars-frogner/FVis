@@ -1,5 +1,5 @@
 '''
-Fvis v1.0.1
+Fvis v1.1.0
 
 Last updated: 29.08.2016
 
@@ -55,7 +55,7 @@ class FluidVisualiser:
 		arr_dim = len(input_arrs.values()[0].shape) # Number of dimensions for simulation
 		arr_shape = input_arrs.values()[0].shape 	# Shape of the data blocks to write
 
-		# Loop through array dict and make sure that the provded arrays have the right type and shape
+		# Loop through array dict and make sure that the provided arrays have the right type and shape
 
 		for name, arr in input_arrs.iteritems():
 
@@ -278,24 +278,14 @@ class FluidVisualiser:
 
 			raise ValueError('Invalid type detected among the inputted parameters.')
 
-
-		# *** Check which folder to use ***
-
-		if folder == 'default':
-
-			if self.hasSaved:
-
-				folder = self.folder
-
-			else:
-
-				raise ValueError('Name of the folder to read from must be specified unless save_data was used with this instance.')
+		# Set valid folder name
+		self.__set_foldername(folder)
 
 
 		# *** Prepare figure ***
 
 		# Get information required for displaying the given quantity
-		self.__read_header_data(folder, forcedim=1)
+		self.__read_header_data(forcedim=1)
 		q, name, unit = self.__get_quantity_info(quantity)
 		min_val, max_val = self.__get_optimal_scaling(q, includeAll=True)
 
@@ -374,7 +364,7 @@ class FluidVisualiser:
 
 			if video_name == 'auto':
 
-				video_name = folder
+				video_name = self.folder
 
 			while os.path.exists(video_name + '.mp4'):
 
@@ -398,7 +388,7 @@ class FluidVisualiser:
 			plt.show()
 
 		# Close files
-		for reader in self.arrs_readers.values():
+		for reader in self.arr_readers.values():
 
 			reader.end_read()
 
@@ -428,24 +418,13 @@ class FluidVisualiser:
 
 			raise ValueError('Invalid type detected among the inputted parameters.')
 
-
-		# *** Check which folder to use ***
-
-		if folder == 'default':
-
-			if self.hasSaved:
-
-				folder = self.folder
-
-			else:
-
-				raise ValueError('Name of the folder to read from must be specified unless save_data was used with this instance.')
-
+		# Set valid folder name
+		self.__set_foldername(folder)
 
 		# *** Prepare figure ***
 
 		# Get information required for displaying the given quantity
-		self.__read_header_data(folder, forcedim=2, matrixLike=matrixLike)
+		self.__read_header_data(forcedim=2, matrixLike=matrixLike)
 		q, name, unit = self.__get_quantity_info(quantity)
 		min_val, max_val = self.__get_optimal_scaling(q)
 
@@ -546,7 +525,7 @@ class FluidVisualiser:
 
 			if video_name == 'auto':
 
-				video_name = folder
+				video_name = self.folder
 
 			while os.path.exists(video_name + '.mp4'):
 
@@ -570,7 +549,7 @@ class FluidVisualiser:
 			plt.show()
 
 		# Close files
-		for reader in self.arrs_readers.values():
+		for reader in self.arr_readers.values():
 
 			reader.end_read()
 
@@ -590,24 +569,14 @@ class FluidVisualiser:
 
 			raise ValueError('Invalid type detected among the inputted parameters.')
 
-
-		# *** Check which folder to use ***
-
-		if folder == 'default':
-
-			if self.hasSaved:
-
-				folder = self.folder
-
-			else:
-
-				raise ValueError('Name of the folder to read from must be specified unless save_data was used with this instance.')
+		# Set valid folder name
+		self.__set_foldername(folder)
 
 
 		# *** Simulate and measure values ***
 
 		# Read header data
-		self.__read_header_data(folder)
+		self.__read_header_data()
 
 		# Get function returning the quantity
 		q, name = self.__get_quantity_info(quantity)[:2]
@@ -645,7 +614,7 @@ class FluidVisualiser:
 			q_list.append(np.sum(q()))
 
 		# Close files
-		for reader in self.arrs_readers.values():
+		for reader in self.arr_readers.values():
 
 			reader.end_read()
 
@@ -729,16 +698,46 @@ class FluidVisualiser:
 
 				print 'FluidVisualiser: No data deleted.'
 
+	def get_last_data(self, folder='default'):
+
+		'''
+		Reads the last arrays in the files of the given folder
+		and returns them in a dictionary.
+		'''
+
+		# Set valid folder name
+		self.__set_foldername(folder)
+
+		# Set attributes required for reading the data
+		self.__prepare_arr_readers()
+
+		# Read the last arrays in the files
+		self.__get_data_blocks(self.Nt - 1)
+
+		# Close files
+		for reader in self.arr_readers.values():
+
+			reader.end_read()
+
+		# Move back to previous working directory
+		os.chdir(self.cwd)
+
+		# Return data
+		return self.arrs, self.t_list[-1]
+
 	# Private methods
 
-	def __read_header_data(self, folder, forcedim=False, matrixLike=True):
+	def __prepare_arr_readers(self):
 
-		'Gets simulation parameters from files in a given folder.'
+		'''
+		Read the info file in the saved folder and define 
+		attributes required for reading the data.
+		'''
 
 		# *** Move to the folder containing the binary files to read ***
 
-		cwd = os.getcwd()
-		newdirpath = os.path.join(cwd, folder)
+		self.cwd = os.getcwd()
+		newdirpath = os.path.join(self.cwd, self.folder)
 		os.chdir(newdirpath)
 
 
@@ -777,6 +776,13 @@ class FluidVisualiser:
 		self.t_list[0] = time_dat[0, 0]
 		self.t_list[1:] = self.t_list[0] + np.cumsum(self.dt_avg_list*self.skips_list)
 		self.Nt = len(self.t_list)
+
+	def __read_header_data(self, forcedim=False, matrixLike=True):
+
+		'Gets simulation parameters from files in a given folder.'
+
+		# Set attributes required for reading the data
+		self.__prepare_arr_readers()
 
 
 		# *** Set fluid properties ***
@@ -842,7 +848,7 @@ class FluidVisualiser:
 			raise ValueError('Invalid dimension of data files.')
 
 		# Move back to previous working directory
-		os.chdir(cwd)
+		os.chdir(self.cwd)
 
 	def __search_info(self, substr):
 
@@ -871,7 +877,7 @@ class FluidVisualiser:
 
 			self.arrs[name] = self.arr_readers[name].read_block(i)
 
-		self.t = self.t_list[self.t_i]
+		self.t = self.t_list[i]
 
 	def __set_initial_conditions(self):
 
@@ -1252,6 +1258,23 @@ class FluidVisualiser:
 
 		return textbox1, textbox2, textbox3
 
+	def __set_foldername(self, folder):
+
+		'''
+		Set a valid folder name, either the one saved 
+		in this instance or the provided one.
+		'''
+
+		if folder == 'default':
+
+			if not self.hasSaved:
+
+				raise ValueError('Name of the folder to read from must be specified unless save_data was used with this instance.')
+
+		else:
+
+			self.folder = folder
+
 	@staticmethod
 	def __s_to_hms(t_s):
 
@@ -1274,7 +1297,6 @@ class FluidVisualiser:
 
 		sys.stdout.write('Progress: %.1f%% | Elapsed: %s%s \r' % (progress, FluidVisualiser.__s_to_hms(elapsed), '' if progress < 5 else (' | ETA: %s' % FluidVisualiser.__s_to_hms(ETA))))
 		sys.stdout.flush()
-
 
 # Private classes (used for input and output)
 
