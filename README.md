@@ -7,6 +7,7 @@ the saving and visualisation of calculated data.
 #### Here is what the module can do for you:
 * Run your simulation for a given amount of time and save the resulting data to binary files.
 * Read data previously saved by the module.
+* Add more simulation data to existing files.
 * Show a 1D or 2D animation of a quantity that can be derived from the stored data.
 * Save the animation as an mp4 file.
 * Plot the time evolution of the average value of a quantity (useful for checking if something is conserved).
