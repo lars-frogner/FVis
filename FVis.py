@@ -717,7 +717,7 @@ class FluidVisualiser:
 
 					newval = float(val)
 
-				except TypeError:
+				except ValueError:
 
 					newval = val
 
