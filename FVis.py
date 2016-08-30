@@ -200,6 +200,7 @@ class FluidVisualiser:
 
 		# Approximate time between each frame to save
 		t_skip = 1.0/sim_fps
+		total_time = t_init
 		elapsed_time = 0
 
 		# Start measuring elapsed time
@@ -213,18 +214,18 @@ class FluidVisualiser:
 
 				# Run an appropriate number of simulation steps
 
-				t = t_init
-				t0 = t
+				t = 0
 				skips = 0
 
-				while t - t0 < t_skip:
+				while t < t_skip:
 
 					t += update_func()
 					skips += 1
 
-				dt_avg = (t - t0)/skips
+				dt_avg = t/skips
 
-				elapsed_time += t - t_init
+				total_time += t
+				elapsed_time = total_time - t_init
 
 				# Write the current data to the files
 
@@ -232,7 +233,7 @@ class FluidVisualiser:
 
 					arr_writers[name].write_block(input_arrs[name])
 
-				time_writer.write_block([t, dt_avg])
+				time_writer.write_block([total_time, dt_avg])
 
 				if wasInterrupted: break
 
