@@ -1,6 +1,6 @@
 # Solvers for testing
-1D_solver.py
-2D_solver.py
+1D_solver*.py
+2D_solver*.py
 
 # Default output folders
 /FVis_output_*
