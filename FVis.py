@@ -232,7 +232,7 @@ class FluidVisualiser:
 
 					arr_writers[name].write_block(input_arrs[name])
 
-				time_writer.write_block([dt_avg, skips])
+				time_writer.write_block([t, dt_avg])
 
 				if wasInterrupted: break
 
@@ -282,13 +282,13 @@ class FluidVisualiser:
 
 			# Write parameters
 
-			def try_convert(val):
+			def convert_if_num(val):
 
-				try:
+				if isinstance(val, float) or isinstance(val, int):
 
 					newval = '%g' % val
 
-				except TypeError:
+				else:
 
 					newval = str(val)
 
@@ -298,7 +298,7 @@ class FluidVisualiser:
 
 				for name in sorted(sim_params):
 
-					info += name + ' = ' + try_convert(sim_params[name]) + '\n'
+					info += name + ' = ' + convert_if_num(sim_params[name]) + '\n'
 
 			f = open('info.txt', 'w')
 			f.write(info[:-1])
@@ -700,9 +700,30 @@ class FluidVisualiser:
 		# Close files
 		self.__close_read_files()
 
-		# Create a dictionary of simulation parameters
+		def adaptive_convert(val):
 
-		out_params = {param_line.split(' = ')[0]:param_line.split(' = ')[1] for param_line in self.param_text.split('\n')}
+			if val == 'True':
+
+				newval = True
+
+			elif val == 'False':
+
+				newval = False
+
+			else:
+
+				try:
+
+					newval = float(val)
+
+				except TypeError:
+
+					newval = val
+
+			return newval
+
+		# Create a dictionary of simulation parameters
+		out_params = {param_line.split(' = ')[0]:adaptive_convert(param_line.split(' = ')[1]) for param_line in self.param_text.split('\n')}
 
 		# Return data and parameters
 		return self.arrs, out_params
@@ -790,11 +811,8 @@ class FluidVisualiser:
 		time_dat = time_reader.read_all()
 		time_reader.end_read()
 
-		self.dt_avg_list = time_dat[1:, 0]
-		self.skips_list = time_dat[1:, 1]
-		self.t_list = np.zeros(len(self.dt_avg_list) + 1)
-		self.t_list[0] = time_dat[0, 0]
-		self.t_list[1:] = self.t_list[0] + np.cumsum(self.dt_avg_list*self.skips_list)
+		self.t_list = time_dat[:, 0]
+		self.dt_avg_list = time_dat[1:, 1]
 		self.Nt = len(self.t_list)
 
 		# Set initial conditons
