@@ -1,7 +1,7 @@
 '''
-Fvis v1.1.0
+Fvis v1.1.1
 
-Last updated: 29.08.2016
+Last updated: 30.08.2016
 
 Copyright (c) 2016 Lars Frogner
 '''
@@ -93,7 +93,7 @@ class FluidVisualiser:
 				if not isinstance(name, str): raise TypeError('Keys in \"sim_params\" must be strings.')
 
 
-		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds and %s %g frames per second to binary files ...\n' % (sim_time, 'appending' if appendMode else 'saving', sim_fps)
+		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds (%d frames will be %s binary files) ...\n' % (sim_time, sim_fps*sim_time, 'added to existing' if appendMode else 'written to new')
 
 		# Get current working directory
 		cwd = os.getcwd()
