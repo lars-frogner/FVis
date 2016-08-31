@@ -1877,6 +1877,7 @@ class _Common:
 		for val in arr[1:]:
 			arr_str += '%s%d' % (symb, val)
 
-		if useParan: arr_str = '(' + arr_str + ')'
+		if useParan:
+			arr_str = '(' + arr_str + ')'
 
 		return arr_str
