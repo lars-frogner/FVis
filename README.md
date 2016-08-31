@@ -12,7 +12,7 @@ the saving and visualisation of calculated data.
 * Save the animation as an mp4 file.
 * Plot the time evolution of the average value of a quantity (useful for checking if something is conserved).
 
-All these actions are performed with a few simple function calls in your main program.
+All these actions can be done with just a few function calls in your main program.
 
 #### Installation
 Just download [FVis.py](FVis.py) (in the linked page, click 'Raw' and then right-click => Save as..) to your working directory and you are good to go.
