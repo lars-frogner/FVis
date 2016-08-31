@@ -1,5 +1,5 @@
 '''
-Fvis v1.1.1
+Fvis v1.1.2
 
 Last updated: 30.08.2016
 
@@ -413,7 +413,7 @@ class FluidVisualiser:
 
 		self.__run_animation(fig, update, save, N_frames, video_fps, video_name)
 
-	def animate_2D(self, quantity, matrixLike=True, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showDeviations=True, showParams=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
+	def animate_2D(self, quantity, matrixLike=True, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showDeviations=True, showParams=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto', backgrounds=None):
 
 		'Creates an animation of the time evolution.'
 
@@ -437,6 +437,14 @@ class FluidVisualiser:
 			extent_unit = 'm' if len(extent) == 4 else str(extent[4])
 			extent = [float(extent[0]), float(extent[1]), float(extent[2]), float(extent[3])]
 
+			if not (backgrounds is None):
+
+				if not isinstance(backgrounds, dict): raise TypeError
+
+			else:
+
+				backgrounds = False
+
 		except (ValueError, TypeError):
 
 			raise TypeError('Invalid type detected among the inputted parameters.')
@@ -448,7 +456,7 @@ class FluidVisualiser:
 
 		# Get information required for displaying the given quantity
 		self.__get_init_data(extent=extent, matrixLike=matrixLike)
-		q, name, unit = self.__get_quantity_info(quantity)
+		q, name, unit = self.__get_quantity_info(quantity, bg=backgrounds)
 		min_val, max_val = self.__get_optimal_scaling(q)
 
 		if self.printInfo: print 'FluidVisualiser: Preparing figure ...'
@@ -906,7 +914,7 @@ class FluidVisualiser:
 
 		return new_dt_avg
 
-	def __get_quantity_info(self, quantity):
+	def __get_quantity_info(self, quantity, bg=False):
 
 		'''
 		Takes a string naming a quantity and returns a function returning 
@@ -936,7 +944,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['rho']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.rho_bg = self.arrs['rho'].copy()
+			self.rho_bg = self.arrs['rho'].copy() if not (bg and 'rho' in bg) else bg['rho']
 
 			q = lambda: (self.arrs['rho'] - self.rho_bg)/self.rho_bg
 
@@ -974,7 +982,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['e']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.e_bg = self.arrs['e'].copy()
+			self.e_bg = self.arrs['e'].copy() if not (bg and 'e' in bg) else bg['e']
 
 			q = lambda: (self.arrs['e'] - self.e_bg)/self.e_bg
 
@@ -1003,7 +1011,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['P']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.P_bg = self.arrs['P'].copy()
+			self.P_bg = self.arrs['P'].copy() if not (bg and 'P' in bg) else bg['P']
 
 			q = lambda: (self.arrs['P'] - self.P_bg)/self.P_bg
 
@@ -1023,7 +1031,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['T']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.T_bg = self.arrs['T'].copy()
+			self.T_bg = self.arrs['T'].copy() if not (bg and 'T' in bg) else bg['T']
 
 			q = lambda: (self.arrs['T'] - self.T_bg)/self.T_bg
 
