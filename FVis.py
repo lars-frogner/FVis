@@ -1862,9 +1862,6 @@ class _Common:
 
 	'Namespace available to all the classes in this module.'
 
-	# Dictionary with type descriptions
-	dtype_descript = {'S':'character', 'i':'signed integer', 'f':'float', 'u':'unsigned integer', 'c':'complex'}
-
 	@staticmethod
 	def get_shape_string(arr, useParan=False):
 
@@ -1881,3 +1878,6 @@ class _Common:
 			arr_str = '(' + arr_str + ')'
 
 		return arr_str
+
+	# Dictionary with type descriptions
+	dtype_descript = {'S':'character', 'i':'signed integer', 'f':'float', 'u':'unsigned integer', 'c':'complex'}
