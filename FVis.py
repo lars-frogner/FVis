@@ -1878,6 +1878,6 @@ class _Common:
 			arr_str = '(' + arr_str + ')'
 
 		return arr_str
-
+	
 	# Dictionary with type descriptions
 	dtype_descript = {'S':'character', 'i':'signed integer', 'f':'float', 'u':'unsigned integer', 'c':'complex'}
