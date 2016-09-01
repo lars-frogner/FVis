@@ -2,8 +2,9 @@
 1D_solver.py
 2D_solver.py
 
-# Default output folders
-/FVis_output_*
+# All folders except user guide
+/*
+!/User guide
 
 # Auxiliary Latex files
 FVis_user_guide.*
