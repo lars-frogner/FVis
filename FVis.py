@@ -1,7 +1,7 @@
 '''
-Fvis v1.1.0
+Fvis v1.1.2
 
-Last updated: 29.08.2016
+Last updated: 30.08.2016
 
 Copyright (c) 2016 Lars Frogner
 '''
@@ -93,7 +93,7 @@ class FluidVisualiser:
 				if not isinstance(name, str): raise TypeError('Keys in \"sim_params\" must be strings.')
 
 
-		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds and %s %g frames per second to binary files ...\n' % (sim_time, 'appending' if appendMode else 'saving', sim_fps)
+		if self.printInfo: print '\nFluidVisualiser: Simulating %g seconds (%d frames will be %s binary files) ...\n' % (sim_time, sim_fps*sim_time, 'added to existing' if appendMode else 'written to new')
 
 		# Get current working directory
 		cwd = os.getcwd()
@@ -200,6 +200,7 @@ class FluidVisualiser:
 
 		# Approximate time between each frame to save
 		t_skip = 1.0/sim_fps
+		total_time = t_init
 		elapsed_time = 0
 
 		# Start measuring elapsed time
@@ -213,18 +214,18 @@ class FluidVisualiser:
 
 				# Run an appropriate number of simulation steps
 
-				t = t_init
-				t0 = t
+				t = 0
 				skips = 0
 
-				while t - t0 < t_skip:
+				while t < t_skip:
 
 					t += update_func()
 					skips += 1
 
-				dt_avg = (t - t0)/skips
+				dt_avg = t/skips
 
-				elapsed_time += t - t_init
+				total_time += t
+				elapsed_time = total_time - t_init
 
 				# Write the current data to the files
 
@@ -232,7 +233,7 @@ class FluidVisualiser:
 
 					arr_writers[name].write_block(input_arrs[name])
 
-				time_writer.write_block([dt_avg, skips])
+				time_writer.write_block([total_time, dt_avg])
 
 				if wasInterrupted: break
 
@@ -282,13 +283,13 @@ class FluidVisualiser:
 
 			# Write parameters
 
-			def try_convert(val):
+			def convert_if_num(val):
 
-				try:
+				if isinstance(val, float) or isinstance(val, int):
 
 					newval = '%g' % val
 
-				except TypeError:
+				else:
 
 					newval = str(val)
 
@@ -298,7 +299,7 @@ class FluidVisualiser:
 
 				for name in sorted(sim_params):
 
-					info += name + ' = ' + try_convert(sim_params[name]) + '\n'
+					info += name + ' = ' + convert_if_num(sim_params[name]) + '\n'
 
 			f = open('info.txt', 'w')
 			f.write(info[:-1])
@@ -412,7 +413,7 @@ class FluidVisualiser:
 
 		self.__run_animation(fig, update, save, N_frames, video_fps, video_name)
 
-	def animate_2D(self, quantity, matrixLike=True, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showDeviations=True, showParams=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
+	def animate_2D(self, quantity, matrixLike=True, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showDeviations=True, showParams=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto', backgrounds=None):
 
 		'Creates an animation of the time evolution.'
 
@@ -436,6 +437,14 @@ class FluidVisualiser:
 			extent_unit = 'm' if len(extent) == 4 else str(extent[4])
 			extent = [float(extent[0]), float(extent[1]), float(extent[2]), float(extent[3])]
 
+			if not (backgrounds is None):
+
+				if not isinstance(backgrounds, dict): raise TypeError
+
+			else:
+
+				backgrounds = False
+
 		except (ValueError, TypeError):
 
 			raise TypeError('Invalid type detected among the inputted parameters.')
@@ -447,7 +456,7 @@ class FluidVisualiser:
 
 		# Get information required for displaying the given quantity
 		self.__get_init_data(extent=extent, matrixLike=matrixLike)
-		q, name, unit = self.__get_quantity_info(quantity)
+		q, name, unit = self.__get_quantity_info(quantity, bg=backgrounds)
 		min_val, max_val = self.__get_optimal_scaling(q)
 
 		if self.printInfo: print 'FluidVisualiser: Preparing figure ...'
@@ -700,9 +709,30 @@ class FluidVisualiser:
 		# Close files
 		self.__close_read_files()
 
-		# Create a dictionary of simulation parameters
+		def adaptive_convert(val):
 
-		out_params = {param_line.split(' = ')[0]:param_line.split(' = ')[1] for param_line in self.param_text.split('\n')}
+			if val == 'True':
+
+				newval = True
+
+			elif val == 'False':
+
+				newval = False
+
+			else:
+
+				try:
+
+					newval = float(val)
+
+				except ValueError:
+
+					newval = val
+
+			return newval
+
+		# Create a dictionary of simulation parameters
+		out_params = {param_line.split(' = ')[0]:adaptive_convert(param_line.split(' = ')[1]) for param_line in self.param_text.split('\n')}
 
 		# Return data and parameters
 		return self.arrs, out_params
@@ -790,11 +820,8 @@ class FluidVisualiser:
 		time_dat = time_reader.read_all()
 		time_reader.end_read()
 
-		self.dt_avg_list = time_dat[1:, 0]
-		self.skips_list = time_dat[1:, 1]
-		self.t_list = np.zeros(len(self.dt_avg_list) + 1)
-		self.t_list[0] = time_dat[0, 0]
-		self.t_list[1:] = self.t_list[0] + np.cumsum(self.dt_avg_list*self.skips_list)
+		self.t_list = time_dat[:, 0]
+		self.dt_avg_list = time_dat[1:, 1]
 		self.Nt = len(self.t_list)
 
 		# Set initial conditons
@@ -887,7 +914,7 @@ class FluidVisualiser:
 
 		return new_dt_avg
 
-	def __get_quantity_info(self, quantity):
+	def __get_quantity_info(self, quantity, bg=False):
 
 		'''
 		Takes a string naming a quantity and returns a function returning 
@@ -917,7 +944,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['rho']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.rho_bg = self.arrs['rho'].copy()
+			self.rho_bg = self.arrs['rho'].copy() if not (bg and 'rho' in bg) else bg['rho']
 
 			q = lambda: (self.arrs['rho'] - self.rho_bg)/self.rho_bg
 
@@ -955,7 +982,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['e']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.e_bg = self.arrs['e'].copy()
+			self.e_bg = self.arrs['e'].copy() if not (bg and 'e' in bg) else bg['e']
 
 			q = lambda: (self.arrs['e'] - self.e_bg)/self.e_bg
 
@@ -984,7 +1011,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['P']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.P_bg = self.arrs['P'].copy()
+			self.P_bg = self.arrs['P'].copy() if not (bg and 'P' in bg) else bg['P']
 
 			q = lambda: (self.arrs['P'] - self.P_bg)/self.P_bg
 
@@ -1004,7 +1031,7 @@ class FluidVisualiser:
 
 			if not self.has_arr['T']: raise ValueError('No visualisation data available for %s.' % name)
 
-			self.T_bg = self.arrs['T'].copy()
+			self.T_bg = self.arrs['T'].copy() if not (bg and 'T' in bg) else bg['T']
 
 			q = lambda: (self.arrs['T'] - self.T_bg)/self.T_bg
 
@@ -1834,7 +1861,7 @@ class _BinAppender(_Restrictor, _BinWriter, _BinReader):
 class _Common:
 
 	'Namespace available to all the classes in this module.'
-
+	
 	# Dictionary with type descriptions
 	dtype_descript = {'S':'character', 'i':'signed integer', 'f':'float', 'u':'unsigned integer', 'c':'complex'}
 
@@ -1850,6 +1877,11 @@ class _Common:
 		for val in arr[1:]:
 			arr_str += '%s%d' % (symb, val)
 
-		if useParan: arr_str = '(' + arr_str + ')'
+		if useParan:
+			arr_str = '(' + arr_str + ')'
 
 		return arr_str
+
+if __name__ == '__main__':
+	
+	None
