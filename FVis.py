@@ -552,6 +552,94 @@ class FluidVisualiser:
 
 		self.__run_animation(fig, update, save, N_frames, video_fps, video_name)
 
+	def animate_energyflux(self, quantity, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showParams=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
+
+		'Creates an animation of the horizontally averaged vertical energy flux.'
+
+		# *** Make sure that the inputted values are valid ***
+
+		try:
+
+			quantity = str(quantity)
+			folder = str(folder)
+			if anim_fps != 'auto': anim_fps = float(anim_fps)
+			height = float(height)
+			if aspect != 'auto': aspect = float(aspect)
+			title = str(title)
+			if anim_time != 'auto': anim_time = float(anim_time)
+			video_fps = float(video_fps)
+			video_name = str(video_name)
+			extent_unit = 'm' if len(extent) == 4 else str(extent[4])
+			extent = [float(extent[0]), float(extent[1]), float(extent[2]), float(extent[3])]
+
+		except (ValueError, TypeError):
+
+			raise TypeError('Invalid type detected among the inputted parameters.')
+
+
+		# Set valid folder name
+		self.__set_foldername(folder)
+
+
+		# *** Prepare figure ***
+
+		# Get information required for displaying the flux
+		self.__get_init_data(extent=extent)
+
+		q, name, unit = self.__get_quantity_info('ew') # Get data for vertical energy flux
+		q2 = lambda: np.mean(q(), axis=1) 			   # Define new function returning horizontally averaged flux
+
+		min_val, max_val = self.__get_optimal_scaling(q2, includeAll=True)
+
+		if self.printInfo: print 'FluidVisualiser: Preparing figure ...'
+
+		# Define figure and axis
+		fig = plt.figure(figsize=(height*aspect, height))
+		ax = fig.add_subplot(111)
+
+		# Create plot for fluid
+		line, = ax.plot(np.linspace([extent[2], extent[3], self.Nz]), q2())
+
+		# Add figure info
+		textbox1, textbox2, textbox3 = self.__prepare_text(ax)
+		
+		# Set axis limits and labels
+		ax.set_xlim(extent[2], extent[3])
+
+		ax.set_ylim(min_val, max_val)
+		ax.set_xlabel('z [' + extent_unit + ']')
+		ax.set_ylabel('ew' + ('' if unit == '' else ' [%s]' % unit))
+		ax.set_title('Vertical energy flux (averaged horizontally)' if title == 'auto' else title)
+
+
+		# *** Define function for updating animation ***
+
+		if anim_fps == 'auto': anim_fps = float(self.Nt)/(self.t_list[-1] - self.t_list[0])
+		t_skip = 1.0/(anim_fps) 	 # Time between each frame to render
+		N_frames = int(np.floor((self.t_list[-1] if anim_time == 'auto' else anim_time)*anim_fps)) # Total number of frames
+
+		def update(i):
+
+			# Run an appropriate number of simulation steps
+			dt_avg = self.__step_time(t_skip)
+
+			# Update fluid image data
+			line.set_ydata(q2())
+
+			# Update text
+
+			textbox1.set_text('Time: %s\ndt = %.2g s' % (FluidVisualiser.__s_to_hms(self.t), dt_avg))
+
+			if showParams: textbox3.set_text(self.param_text)
+
+			# Print progress if generating a movie
+			if save: FluidVisualiser.__print_progress(i, N_frames, self.t0)
+
+			# Return figure content
+			return line, textbox1, textbox2, textbox3
+
+		self.__run_animation(fig, update, save, N_frames, video_fps, video_name)
+
 	def plot_avg(self, quantity, folder='default', measure_time='auto', showTrendline=False):
 
 		'Plots the time evolution of the average of a given quantity.'
