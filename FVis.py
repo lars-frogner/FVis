@@ -1,11 +1,16 @@
-'''
-Fvis v1.1.2
-
-Last updated: 30.08.2016
-
-Copyright (c) 2016 Lars Frogner
-'''
-
+#
+# This program contains classes for managing and visualising data 
+# produced by fluid simulation programs.
+#
+# Version: 1.1.2
+#
+# State: Functional
+#
+# Todo: Update user guide with info about "backgrounds" argument to 
+# 		animate_2D.
+#
+# Last modified 10.09.2016 by Lars Frogner
+#
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
@@ -16,7 +21,6 @@ import os, sys, time, datetime, struct
 ' *** For Windows users: Specify path to ffmpeg (required for saving animations) *** '
 
 #plt.rcParams['animation.ffmpeg_path'] = r'<My path to ffmpeg folder>\ffmpeg\bin\ffmpeg'
-
 
 class FluidVisualiser:
 
