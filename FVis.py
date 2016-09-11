@@ -2,14 +2,14 @@
 # This program contains classes for managing and visualising data 
 # produced by fluid simulation programs.
 #
-# Version: 1.1.2
+# Version: 1.1.3
 #
 # State: Functional
 #
 # Todo: Update user guide with info about "backgrounds" argument to 
-# 		animate_2D.
+# 		animate_2D and the new animate_energyflux method.
 #
-# Last modified 10.09.2016 by Lars Frogner
+# Last modified 11.09.2016 by Lars Frogner
 #
 import numpy as np
 import matplotlib.pyplot as plt
@@ -552,7 +552,7 @@ class FluidVisualiser:
 
 		self.__run_animation(fig, update, save, N_frames, video_fps, video_name)
 
-	def animate_energyflux(self, quantity, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showParams=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
+	def animate_energyflux(self, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showParams=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
 		'Creates an animation of the horizontally averaged vertical energy flux.'
 
@@ -560,7 +560,6 @@ class FluidVisualiser:
 
 		try:
 
-			quantity = str(quantity)
 			folder = str(folder)
 			if anim_fps != 'auto': anim_fps = float(anim_fps)
 			height = float(height)
@@ -587,7 +586,9 @@ class FluidVisualiser:
 		self.__get_init_data(extent=extent)
 
 		q, name, unit = self.__get_quantity_info('ew') # Get data for vertical energy flux
-		q2 = lambda: np.mean(q(), axis=1) 			   # Define new function returning horizontally averaged flux
+		q2 = lambda: np.mean(q(), axis=1)*1.0e-9	   # Define new function returning horizontally averaged flux
+		unit = 'GW/m^2'
+		name = 'Energy flux'
 
 		min_val, max_val = self.__get_optimal_scaling(q2, includeAll=True)
 
@@ -598,17 +599,16 @@ class FluidVisualiser:
 		ax = fig.add_subplot(111)
 
 		# Create plot for fluid
-		line, = ax.plot(np.linspace([extent[2], extent[3], self.Nz]), q2())
+		line, = ax.plot(q2(), np.linspace(extent[2], extent[3], self.Nz))
 
 		# Add figure info
-		textbox1, textbox2, textbox3 = self.__prepare_text(ax)
+		textbox1, textbox2, textbox3 = self.__prepare_text(ax, showExtent=False)
 		
 		# Set axis limits and labels
-		ax.set_xlim(extent[2], extent[3])
-
-		ax.set_ylim(min_val, max_val)
-		ax.set_xlabel('z [' + extent_unit + ']')
-		ax.set_ylabel('ew' + ('' if unit == '' else ' [%s]' % unit))
+		ax.set_xlim(min_val, max_val)
+		ax.set_ylim(extent[2], extent[3])
+		ax.set_xlabel(name + ('' if unit == '' else ' [%s]' % unit))
+		ax.set_ylabel('z [' + extent_unit + ']')
 		ax.set_title('Vertical energy flux (averaged horizontally)' if title == 'auto' else title)
 
 
@@ -624,11 +624,12 @@ class FluidVisualiser:
 			dt_avg = self.__step_time(t_skip)
 
 			# Update fluid image data
-			line.set_ydata(q2())
+			line.set_xdata(q2())
 
 			# Update text
 
 			textbox1.set_text('Time: %s\ndt = %.2g s' % (FluidVisualiser.__s_to_hms(self.t), dt_avg))
+			textbox2.set_text('Average: %.2g GW/m^2' % (np.mean(q2())))
 
 			if showParams: textbox3.set_text(self.param_text)
 
@@ -1320,7 +1321,7 @@ class FluidVisualiser:
 
 		return step_q, quiver
 
-	def __prepare_text(self, ax):
+	def __prepare_text(self, ax, showExtent=True):
 
 		'Sets up textboxes for updateable info.'
 
@@ -1336,19 +1337,21 @@ class FluidVisualiser:
 
 		# Display number of data points above the animation
 
-		if self.dim == 2:
+		if showExtent:
 
-			ax.text(0.005, 1.005, 'Nx = %d, Nz = %d' % (self.Nx, self.Nz), color='k', fontsize=11, horizontalalignment='left', 
-										     							   verticalalignment='bottom', transform=ax.transAxes)
+			if self.dim == 2:
 
-		elif self.dim == 1:
+				ax.text(0.005, 1.005, 'Nx = %d, Nz = %d' % (self.Nx, self.Nz), color='k', fontsize=11, horizontalalignment='left', 
+											     							   verticalalignment='bottom', transform=ax.transAxes)
 
-			ax.text(0.005, 1.005, 'N = %d' % (self.N), color='k', fontsize=11, horizontalalignment='left', 
-										     		   verticalalignment='bottom', transform=ax.transAxes)
+			elif self.dim == 1:
 
-		else:
+				ax.text(0.005, 1.005, 'N = %d' % (self.N), color='k', fontsize=11, horizontalalignment='left', 
+											     		   verticalalignment='bottom', transform=ax.transAxes)
 
-			raise ValueError('Invalid dimension.')
+			else:
+
+				raise ValueError('Invalid dimension.')
 
 		return textbox1, textbox2, textbox3
 
