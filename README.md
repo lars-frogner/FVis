@@ -15,7 +15,10 @@ the saving and visualisation of calculated data.
 All these actions can be done with just a few function calls in your main program.
 
 #### Installation
-Just download [FVis.py](FVis.py) (in the linked page, click 'Raw' and then right-click => Save as..) to your working directory and you are good to go.
+Just download [FVis.py](/src/FVis.py) (in the linked page, click 'Raw' and then right-click => Save as..) to your working directory and you are good to go.
 
 #### Usage
-Check out the [User guide](User guide/FVis_user_guide.pdf) for instructions on how to use the module.
+Check out the [User guide](/User guide/FVis_user_guide.pdf) for instructions on how to use the module.
+
+#### Screenshots
+![sound waves](/Screenshots/sound_waves.png?raw=true)
