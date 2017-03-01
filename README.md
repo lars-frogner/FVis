@@ -21,4 +21,4 @@ Just download [FVis.py](/src/FVis.py) (in the linked page, click 'Raw' and then 
 Check out the [User guide](/User guide/FVis_user_guide.pdf) for instructions on how to use the module.
 
 #### Screenshots
-![sound waves](/Screenshots/sound_waves.png?raw=true)
+![sound waves](/Screenshots/sound_waves.png?raw=true "Sound waves in a uniform medium")
