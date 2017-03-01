@@ -21,11 +21,14 @@ Just download [FVis.py](/src/FVis.py) (in the linked page, click 'Raw' and then 
 Check out the [User guide](/User guide/FVis_user_guide.pdf) for instructions on how to use the module.
 
 #### Screenshots
-1D shock tube test:
+**1D shock tube test:**
+
 ![shock tube](/Screenshots/shock_tube.png?raw=true "Shock tube")
 
-Sound waves in a uniform medium:
+**Sound waves in a uniform medium:**
+
 ![sound waves](/Screenshots/sound_waves.png?raw=true "Sound waves in a uniform medium")
 
-Solar convection cell:
+**Solar convection cell:**
+
 ![convection](/Screenshots/convection.png?raw=true "Solar convection")
