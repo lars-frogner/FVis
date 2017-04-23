@@ -6,10 +6,7 @@
 #
 # State: Functional
 #
-# Todo: Update user guide with info about "backgrounds" argument to 
-# 		animate_2D and the new animate_energyflux method.
-#
-# Last modified 11.09.2016 by Lars Frogner
+# Last modified 23.04.2017 by Lars Frogner
 #
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,6 +26,10 @@ class FluidVisualiser:
 	# Public methods
 
 	def __init__(self, printInfo=True):
+
+		'''
+		Constructor.
+		'''
 
 		self.printInfo = printInfo
 		self.hasSaved = False
@@ -321,7 +322,7 @@ class FluidVisualiser:
 
 	def animate_1D(self, quantity, folder='default', extent=[0, 1], anim_fps='auto', showDeviations=True, showParams=True, height=7, aspect=1.1, title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto'):
 
-		'Creates a 1D animation of the time evolution.'
+		'Creates an animation of the time evolution of a 1D simulation.'
 
 		# *** Make sure that the inputted values are valid ***
 
@@ -419,7 +420,7 @@ class FluidVisualiser:
 
 	def animate_2D(self, quantity, matrixLike=True, folder='default', extent=[0, 1, 0, 1], anim_fps='auto', showDeviations=True, showParams=True, showQuiver=True, quiverscale=1, N_arrows=20, interpolation='none', cmap='jet', height=7, aspect='equal', title='auto', save=False, anim_time='auto', video_fps=30, video_name='auto', backgrounds=None):
 
-		'Creates an animation of the time evolution.'
+		'Creates an animation of the time evolution of a 2D simulation.'
 
 		# *** Make sure that the inputted values are valid ***
 
@@ -730,9 +731,7 @@ class FluidVisualiser:
 
 	def delete_current_data(self):
 
-		''''
-		Method for deleting the data saved by save_data (in this instance).
-		'''
+		'Deletes the data saved by save_data in this instance.'
 
 		if not self.hasSaved:
 
