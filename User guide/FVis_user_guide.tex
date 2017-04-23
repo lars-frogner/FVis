@@ -42,7 +42,7 @@
 % Title
 \title{\bfseries Using the FVis module}
 %\author{Lars Frogner}
-\date{Applies to v1.1.1}
+\date{Applies to v1.1.3}
 
 % Table of contents
 \pagenumbering{gobble}
@@ -203,14 +203,16 @@ You can more or less automate the process of resetting your solver to the correc
 
 \section{Argument descriptions}
 \label{sec:margs}
-\subsection{\ttt{FluidVisualiser} (constructor)}
+\subsection{\ttt{FluidVisualiser}}
 \label{sec:const}
+\textit{Constructor.}
 \begin{itemize}
 	\item \ttt{\cro{printInfo}=\cbl{True}}: Type: \ptype{bool}.\\Whether to print info about execution to the terminal.
 \end{itemize}
 
 \subsection{\ttt{save\_data}}
 \label{sec:sd}
+\textit{Advances the simulation by a given amount of time and saves the relevant data to binary files.}
 \begin{itemize}
 	\item First argument: Types: \ptype{int}, \ptype{float}.\\Number of seconds to simulate.
 	\item Second argument: Type: \ptype{callable}.\\Function/method for advancing the simulation by a time step and updating arrays of the primary and secondary variables. Must take no input, and return the time step length.
@@ -224,6 +226,7 @@ You can more or less automate the process of resetting your solver to the correc
 
 \subsection{\ttt{animate\_1D}}
 \label{sec:anim1}
+\textit{Creates an animation of the time evolution of a 1D simulation.}
 \begin{itemize}
 	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities \hyperref[sec:quants]{here}.
 	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\Name of the folder to save read the data from. The default value can only be used when the same instance has already been used to save data. Then the folder that the data was saved to will automatically be used.
@@ -242,11 +245,13 @@ You can more or less automate the process of resetting your solver to the correc
 
 \subsection{\ttt{animate\_2D}}
 \label{sec:anim2}
+\textit{Creates an animation of the time evolution of a 2D simulation.}
 \begin{itemize}
 	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities \hyperref[sec:quants]{here}.
 	\item \ttt{\cro{matrixLike}=\cbl{True}}: Type: \ptype{bool}.\\Whether the 2D arrays are indexed like matrices or not. If \ttt{[i, k]} refers to column \ttt{i} and row \ttt{k} in your arrays, set to false.
+	\item \ttt{\cro{backgrounds}=\cbl{None}}: Type: \ptype{dict}.\\Used for specifying alternative initial states $\phi(\mathbf{r}, 0)$ to use when visualising any of the contrast quantities \hyperref[sec:quants]{here}. If set to \ttt{\cbl{None}}, the earliest state in the current set of visualisation data will be used. Otherwise, the argument must be a dictionary where the keys are the names of the relevant quantities (like \ttt{\cyo{'rho'}}, \ttt{\cyo{'T'}} etc.), and the values are 2D arrays representing the corresponding initial states.
 	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
-	\item \ttt{\cro{extent}=[0, 1, 0, 1]}: Type: \ptype{list}.\\List specifying the spatial coordinate of the left, right, lower and upper edge of the simulation area. Used to label the axes of the animation. A third element in the list can also be included, which must be a string specifying the unit that the coordinates are given in (e.g. \ttt{'Mm'} if the numbers are given in megametres).
+	\item \ttt{\cro{extent}=[0, 1, 0, 1]}: Type: \ptype{list}.\\List specifying the spatial coordinate of the left, right, lower and upper edge of the simulation area. Used to label the axes of the animation. A fifth element in the list can also be included, which must be a string specifying the unit that the coordinates are given in (e.g. \ttt{'Mm'} if the numbers are given in megametres).
 	\item \ttt{\cro{anim\_fps}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{showDeviations}=\cbl{True}}: Type: \ptype{bool}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{showParams}=\cbl{True}}: Type: \ptype{bool}.\\See \ttt{animate\_1D} description.
@@ -264,8 +269,26 @@ You can more or less automate the process of resetting your solver to the correc
 	\item \ttt{\cro{video\_name}=\cyo{'auto'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
 \end{itemize}
 
+\subsection{\ttt{animate\_energyflux}}
+\label{sec:animen}
+\textit{Creates an animation of the horizontally averaged vertical energy flux.}
+\begin{itemize}
+	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{extent}=[0, 1, 0, 1]}: Type: \ptype{list}.\\See \ttt{animate\_2D} description.
+	\item \ttt{\cro{anim\_fps}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{showParams}=\cbl{True}}: Type: \ptype{bool}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{height}=7}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{aspect}=1.1}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{title}=\cyo{'auto'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{save}=\cbl{False}}: Type: \ptype{bool}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{anim\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{video\_fps}=30}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{video\_name}=\cyo{'auto'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+\end{itemize}
+
 \subsection{\ttt{plot\_avg}}
 \label{sec:pa}
+\textit{Plots the time evolution of the average of a given quantity.}
 \begin{itemize}
 	\item First argument: Type: \ptype{str}.\\Which quantity to measure average of. See list of quantities \hyperref[sec:quants]{here}.
 	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
@@ -273,8 +296,13 @@ You can more or less automate the process of resetting your solver to the correc
 	\item \ttt{\cro{showTrendline}=\cbl{False}}: Type: \ptype{bool}.\\Whether to show a simple, linear trend line for the time evolution.
 \end{itemize}
 
+\subsection{\ttt{delete\_current\_data}}
+\label{sec:dcd}
+\textit{Deletes the data saved by \ttt{save\_data} in this instance.}
+
 \subsection{\ttt{get\_last\_data}}
 \label{sec:gld}
+\textit{Reads the last arrays in the files of the given folder and returns them in a dictionary.}
 \begin{itemize}
 	\item First argument: Type: \ptype{str}.\\Name of the folder to return data from.
 \end{itemize}
