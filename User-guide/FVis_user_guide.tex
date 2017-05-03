@@ -41,8 +41,8 @@
 
 % Title
 \title{\bfseries Using the FVis module}
-%\author{Lars Frogner}
-\date{Applies to v1.1.3}
+\author{Lars Frogner}
+\date{\textit{Applies to version 1.1.3}}
 
 % Table of contents
 \pagenumbering{gobble}
@@ -53,7 +53,7 @@
 
 \section{Introduction}
 \label{sec:intr}
-This guide describes the usage of the Python module \ttt{FVis.py}, which provides a simple way of saving and visualising the results of your fluid simulations.
+This guide describes the usage of the Python module \ttt{FVis.py}, which provides a simple way of saving and visualising the results of your fluid simulations. The most important aspects of the module should be covered here, but any questions or comments can be directed to \href{mailto:lars.frogner@astro.uio.no}{lars.frogner@astro.uio.no}.
 
 \section{Required packages}
 \label{sec:pack}
@@ -81,7 +81,7 @@ Then, below all your simulation code, create an instance of the visualisation cl
 \begin{lstlisting}
 vis = FVis.FluidVisualiser()
 \end{lstlisting}
-\ttt{FluidVisualiser} is the only (public) class in the module, and you will be using the instance \ttt{vis} for every action you perform with the module. You are now almost ready to save some data, which is done with the method \ttt{save\_data}. But first there are a few requirements on your implementation that you need to know about.
+\ttt{FluidVisualiser} is a class containing all the methods you need for saving simulation data and creating animations, and you will be using the instance \ttt{vis} for every action you perform with the module. You are now almost ready to save some data, which is done with the method \ttt{save\_data}. This method will advance your simulation for you and output the required simulation variables (density, velocity etc.) to files with regular intervals. We will see how to do this in a second, but first there are a few requirements on your solver implementation that you need to know about.
 
 \section{Requirements on your solver}
 \label{sec:req}
@@ -89,7 +89,7 @@ Suppose you have written a 1D solver for the Navier-Stokes equations with no ene
 You will also need to have a function or method, let's call it \ttt{step}, that can advance the simulation by one time step and update the content of the arrays. \ttt{step} can take no arguments; it must have access to the arrays either as class attributes (highly recommended) or as global variables (not recommended). Here are examples for both cases:\\
 \begin{minipage}{\linewidth}
 \begin{lstlisting}
-# *** Class approach :) ***
+# *** Class approach ***
 
 def step(self):
 
@@ -106,7 +106,7 @@ def step(self):
 \end{minipage}
 \begin{minipage}{\linewidth}
 \begin{lstlisting}
-# *** Global approach :( ***
+# *** Global approach ***
 
 def step():
 
@@ -147,9 +147,11 @@ solver = MySolver(<arguments>)
 vis.save_data(1000, solver.step, rho=solver.rho, u=solver.u, P=solver.P, sim_fps=0.5)
 \end{lstlisting}
 \end{minipage}
-The first argument to \ttt{save\_data} is the number of seconds to simulate. The second argument is the stepping function/method. Following that are a series of keyword arguments for the references to the arrays that are to be saved. Finally in this call we have specified the number of frames to save each second. A higher value for \ttt{sim\_fps} thus gives a finer time resolution for the saved data. A detailed list of possible arguments to \ttt{save\_data} can be found \hyperref[sec:sd]{here}.\\\\
-By default, the binary files containing the data are saved in a time stamped folder inside your working directory, but you can also specify a custom name with the keyword argument \ttt{folder='<My custom name>'}.\\\\
-Should you get tired of waiting and want to end the writing process earlier than planned, just do a keyboard interrupt, and the program will finish up what it was doing and abort gracefully. Your data will be just fine.
+The first argument to \ttt{save\_data} is the number of seconds to simulate. The second argument is the stepping function/method. Following that are a series of keyword arguments for the references to the arrays that are to be saved. Finally in this call we have specified the number of frames to save each second. A higher value for \ttt{sim\_fps} thus gives a finer time resolution for the saved data. A detailed list of possible arguments to \ttt{save\_data} can be found in the \nameref{sec:sd} section.\\\\
+One particular keyword argument to \ttt{save\_data} is worth mentioning in a little more detail here; the argument \ttt{sim\_params}. You can use it for storing the values of all kinds of parameters that characterise your simulation run, like the number of grid points, the size of the simulation box, the viscosity etc. You do this by creating a dictionary where the keys are string representations of the parameter names, and the values are the numerical values used for the parameters. This dictionary is then given to the \ttt{save\_data} method through the \ttt{sim\_params} argument. There are two uses of this. The first is that you can have your parameters displayed on top of the animation, making it easier to analyse various simulation runs. The other is that you can retrieve the parameters later and use them for continuing the simulation from where it ended (see \nameref{sec:addat}). \\\\
+For a 2D simulation you would also call \ttt{save\_data} almost like above, only this time you would have a couple of additional variables in your simulation (like internal energy and one more velocity component), and references to these must be included in your call to \ttt{save\_data}.\\\\
+By default, the binary files containing the output data are saved in a time stamped folder inside your working directory, but you can also specify a custom name with the keyword argument \ttt{folder='<My custom name>'}.\\\\
+Should you get tired of waiting and want to end the writing process earlier than planned, just do a keyboard interrupt (ctrl-C), and the program will finish up what it was doing and abort gracefully. Your data will be just fine.
 
 \section{Animating}
 \label{sec:anim}
@@ -157,10 +159,10 @@ Now that we have saved our precious data, it's time to visualise it. This is don
 \begin{lstlisting}
 vis.animate_1D('rho', folder='FVis_output_<yyyy_mm_dd_hh_MM>')
 \end{lstlisting}
-The first argument is a string describing the quantity to show. This can be any of the quantities that were saved (so \ttt{rho}, \ttt{u} or \ttt{P} for the case discussed above), or a derived quantity like horizontal momentum (\ttt{'ru'}) or pressure contrast (\ttt{'dP'}). A complete list of the possible quantities can be found \hyperref[sec:quants]{here}.\\\\
+The first argument is a string describing the quantity to show. This can be any of the quantities that were saved (so \ttt{rho}, \ttt{u} or \ttt{P} for the case discussed above), or a derived quantity like horizontal momentum (\ttt{'ru'}) or pressure contrast (\ttt{'dP'}). A complete list of the possible quantities can be found in the \nameref{sec:quants} section.\\\\
 The keyword argument \ttt{folder} in the above call specifies the name of the folder to read the binary files from. In this example the data is read from some default time stamped folder. If you want to animate data that was saved with the same \ttt{FluidVisualiser} instance (in the same running of the program), the folder name doesn't have to be specified since it is already known to the instance.\\\\
-There are a number of other keyword arguments available, all listed \hyperref[sec:anim1]{here} for \ttt{animate\_1D} and \hyperref[sec:anim2]{here} for \ttt{animate\_2D}.\\\\
-One thing to be aware of when creating 2D animations is that \ttt{animate\_2D} by default assumes that your arrays are indexed like matrices, in other words that the first index refers to the row (height) and the second index refers to the column (width). If you have done it the other way around, add the keyword argument \ttt{matrixLike=False} in \ttt{animate\_2D} so that your arrays can get transposed before they are shown.
+There are a number of other keyword arguments available, all listed in the \nameref{sec:anim1} section for \ttt{animate\_1D} and the \nameref{sec:anim2} section for \ttt{animate\_2D}.\\\\
+One thing to be aware of when creating 2D animations is that \ttt{animate\_2D} by default assumes that your arrays are indexed like matrices, in other words that the first index specifies the row (and thus denotes height) and the second index specifies the column (and thus denotes width). If you have done it the other way around, add the keyword argument \ttt{matrixLike=False} in \ttt{animate\_2D} so that your arrays can get transposed before they are shown.
 
 \section{Plotting time evolution of an average}
 \label{sec:plot}
@@ -168,7 +170,7 @@ If we for instance want to check whether mass is conserved in our simulation, we
 \begin{lstlisting}
 vis.plot_avg('rho', folder='FVis_output_<yyyy_mm_dd_hh_MM>')
 \end{lstlisting}
-All quantities that can be used with one of the animation methods (listed \hyperref[sec:quants]{here}) can also be used with \ttt{plot\_avg}. See \hyperref[sec:pa]{here} for additional keyword arguments.
+All quantities that can be used with one of the animation methods (listed in the \nameref{sec:quants} section) can also be used with \ttt{plot\_avg}. See the \nameref{sec:pa} section for additional keyword arguments.
 
 \section{Temporary visualisation}
 \label{sec:temp}
@@ -228,7 +230,7 @@ You can more or less automate the process of resetting your solver to the correc
 \label{sec:anim1}
 \textit{Creates an animation of the time evolution of a 1D simulation.}
 \begin{itemize}
-	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities \hyperref[sec:quants]{here}.
+	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities in the \nameref{sec:quants} section.
 	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\Name of the folder to save read the data from. The default value can only be used when the same instance has already been used to save data. Then the folder that the data was saved to will automatically be used.
 	\item \ttt{\cro{extent}=[0, 1]}: Type: \ptype{list}.\\List specifying the spatial coordinate of the left and right edge of the simulation area. Used to label the horizontal axis of the animation. A third element in the list can also be included, which must be a string specifying the unit that the coordinates are given in (e.g. \ttt{'Mm'} if the numbers are given in megametres).
 	\item \ttt{\cro{anim\_fps}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\The number of times per simulation second to show an animation frame. Will not in practice be larger than the fps used to save the data, but any value is accepted. Default uses the same fps as the data was saved with.
@@ -247,9 +249,9 @@ You can more or less automate the process of resetting your solver to the correc
 \label{sec:anim2}
 \textit{Creates an animation of the time evolution of a 2D simulation.}
 \begin{itemize}
-	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities \hyperref[sec:quants]{here}.
+	\item First argument: Type: \ptype{str}.\\Which quantity to visualise. See list of quantities in the \nameref{sec:quants} section.
 	\item \ttt{\cro{matrixLike}=\cbl{True}}: Type: \ptype{bool}.\\Whether the 2D arrays are indexed like matrices or not. If \ttt{[i, k]} refers to column \ttt{i} and row \ttt{k} in your arrays, set to false.
-	\item \ttt{\cro{backgrounds}=\cbl{None}}: Type: \ptype{dict}.\\Used for specifying alternative initial states $\phi(\mathbf{r}, 0)$ to use when visualising any of the contrast quantities \hyperref[sec:quants]{here}. If set to \ttt{\cbl{None}}, the earliest state in the current set of visualisation data will be used. Otherwise, the argument must be a dictionary where the keys are the names of the relevant quantities (like \ttt{\cyo{'rho'}}, \ttt{\cyo{'T'}} etc.), and the values are 2D arrays representing the corresponding initial states.
+	\item \ttt{\cro{backgrounds}=\cbl{None}}: Type: \ptype{dict}.\\Used for specifying alternative initial states $\phi(\mathbf{r}, 0)$ to use when visualising any of the contrast quantities in the \nameref{sec:quants} section. If set to \ttt{\cbl{None}}, the earliest state in the current set of visualisation data will be used. Otherwise, the argument must be a dictionary where the keys are the names of the relevant quantities (like \ttt{\cyo{'rho'}}, \ttt{\cyo{'T'}} etc.), and the values are 2D arrays representing the corresponding initial states.
 	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{extent}=[0, 1, 0, 1]}: Type: \ptype{list}.\\List specifying the spatial coordinate of the left, right, lower and upper edge of the simulation area. Used to label the axes of the animation. A fifth element in the list can also be included, which must be a string specifying the unit that the coordinates are given in (e.g. \ttt{'Mm'} if the numbers are given in megametres).
 	\item \ttt{\cro{anim\_fps}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
@@ -290,7 +292,7 @@ You can more or less automate the process of resetting your solver to the correc
 \label{sec:pa}
 \textit{Plots the time evolution of the average of a given quantity.}
 \begin{itemize}
-	\item First argument: Type: \ptype{str}.\\Which quantity to measure average of. See list of quantities \hyperref[sec:quants]{here}.
+	\item First argument: Type: \ptype{str}.\\Which quantity to measure average of. See list of quantities in the \nameref{sec:quants} section.
 	\item \ttt{\cro{folder}=\cyo{'default'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{measure\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\The number of seconds of simulation time that will be included in the plot. Default value uses the number of seconds spanned by the saved data. If set to larger than this, the measuring will stop automatically.
 	\item \ttt{\cro{showTrendline}=\cbl{False}}: Type: \ptype{bool}.\\Whether to show a simple, linear trend line for the time evolution.
