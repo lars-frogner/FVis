@@ -42,7 +42,7 @@
 % Title
 \title{\bfseries Using the FVis module}
 \author{Lars Frogner}
-\date{\textit{Applies to version 1.1.3}}
+\date{\textit{Applies to version 1.1.4}}
 
 % Table of contents
 \pagenumbering{gobble}
@@ -210,6 +210,7 @@ You can more or less automate the process of resetting your solver to the correc
 \textit{Constructor.}
 \begin{itemize}
 	\item \ttt{\cro{printInfo}=\cbl{True}}: Type: \ptype{bool}.\\Whether to print info about execution to the terminal.
+	\item \ttt{\cro{fontsize}=13}: Types: \ptype{int}, \ptype{float}.\\Font size to use in figures.
 \end{itemize}
 
 \subsection{\ttt{save\_data}}
@@ -243,6 +244,7 @@ You can more or less automate the process of resetting your solver to the correc
 	\item \ttt{\cro{anim\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\The number of simulation seconds the animation will run for when saving to an mp4 file. Default value uses the number of seconds spanned by the saved data. If set to larger than this, the animation will restart from the initial time.
 	\item \ttt{\cro{video\_fps}=30}: Types: \ptype{int}, \ptype{float}.\\The fps to use for the mp4 video. The difference between this and the animation fps option is that the latter describes the number of frames to show per simulation time, while the former describes the number of frames to show per real time. The length of the video in real seconds will be \ttt{anim\_time*anim\_fps/video\_fps}.
 	\item \ttt{\cro{video\_name}=\cyo{'auto'}}: Type: \ptype{str}.\\Name to use for saved mp4 file. Don't include the .mp4 extension. Default uses the name of the data folder.
+	\item \ttt{\cro{snapshots}=\cbl{None}}: Type: \ptype{list}.\\Used for specifying a list of times (in seconds) for which to save snapshots of the animation as PNG images. Note that the animation video will not be shown or saved when such a list is specified.
 \end{itemize}
 
 \subsection{\ttt{animate\_2D}}
@@ -269,6 +271,7 @@ You can more or less automate the process of resetting your solver to the correc
 	\item \ttt{\cro{anim\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{video\_fps}=30}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{video\_name}=\cyo{'auto'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{snapshots}=\cbl{None}}: Type: \ptype{list}.\\See \ttt{animate\_1D} description.
 \end{itemize}
 
 \subsection{\ttt{animate\_energyflux}}
@@ -286,6 +289,7 @@ You can more or less automate the process of resetting your solver to the correc
 	\item \ttt{\cro{anim\_time}=\cyo{'auto'}}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{video\_fps}=30}: Types: \ptype{int}, \ptype{float}.\\See \ttt{animate\_1D} description.
 	\item \ttt{\cro{video\_name}=\cyo{'auto'}}: Type: \ptype{str}.\\See \ttt{animate\_1D} description.
+	\item \ttt{\cro{snapshots}=\cbl{None}}: Type: \ptype{list}.\\See \ttt{animate\_1D} description.
 \end{itemize}
 
 \subsection{\ttt{plot\_avg}}
