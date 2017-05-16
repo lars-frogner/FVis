@@ -42,7 +42,7 @@
 % Title
 \title{\bfseries Using the FVis module}
 \author{Lars Frogner}
-\date{\textit{Applies to version 1.1.4}}
+\date{\textit{Applies to version 1.1.5}}
 
 % Table of contents
 \pagenumbering{gobble}
@@ -211,6 +211,7 @@ You can more or less automate the process of resetting your solver to the correc
 \begin{itemize}
 	\item \ttt{\cro{printInfo}=\cbl{True}}: Type: \ptype{bool}.\\Whether to print info about execution to the terminal.
 	\item \ttt{\cro{fontsize}=13}: Types: \ptype{int}, \ptype{float}.\\Font size to use in figures.
+	\item \ttt{\cro{blit}=\cbl{True}}: Type: \ptype{bool}.\\Whether to use "blitting" when rendering the animation. If activated, only the parts of the figure that have actually changed since the last frame will be updated when a new frame is rendered. This can lead to a significant performance boost. Note that Mac users should try to disable this feature if they experience crashes when trying to generate an animation.
 \end{itemize}
 
 \subsection{\ttt{save\_data}}
