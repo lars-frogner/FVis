@@ -2,11 +2,11 @@
 # This program contains classes for managing and visualising data 
 # produced by fluid simulation programs.
 #
-# Version: 1.1.4
+# Version: 1.1.5
 #
 # State: Functional
 #
-# Last modified 14.05.2017 by Lars Frogner
+# Last modified 16.05.2017 by Lars Frogner
 #
 import numpy as np
 import matplotlib as mpl
@@ -26,7 +26,7 @@ class FluidVisualiser:
 
     # Public methods
 
-    def __init__(self, printInfo=True, fontsize=11):
+    def __init__(self, printInfo=True, fontsize=11, blit=True):
 
         '''
         Constructor.
@@ -34,6 +34,7 @@ class FluidVisualiser:
 
         self.printInfo = printInfo
         self.fontsize = float(fontsize)
+        self.use_blit = blit
         self.hasSaved = False
 
         mpl.rcParams.update({'font.size': self.fontsize})
@@ -367,8 +368,8 @@ class FluidVisualiser:
         ax = fig.add_subplot(111)
 
         # Create plot for fluid
-        line, = ax.plot(self.l, q(), animated=True)
-        if not save_snaps: ax.cla()
+        line, = ax.plot(self.l, q(), animated=self.use_blit)
+        if self.use_blit and not save_snaps: ax.cla()
 
         # Add figure info
         textbox1, textbox2, textbox3 = self.__prepare_text(ax)
@@ -866,7 +867,7 @@ class FluidVisualiser:
 
             video_name += '.mp4'
 
-            animation = matplotlib.animation.FuncAnimation(fig, update, blit=True, frames=N_frames)
+            animation = matplotlib.animation.FuncAnimation(fig, update, blit=self.use_blit, frames=N_frames)
 
             self.t0 = time.time()
 
@@ -878,7 +879,7 @@ class FluidVisualiser:
 
             if self.printInfo: print 'FluidVisualiser: Playing animation ...'
 
-            animation = matplotlib.animation.FuncAnimation(fig, update, blit=True)
+            animation = matplotlib.animation.FuncAnimation(fig, update, blit=self.use_blit)
             plt.show()
 
         else:
