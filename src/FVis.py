@@ -2,11 +2,11 @@
 # This program contains classes for managing and visualising data 
 # produced by fluid simulation programs.
 #
-# Version: 1.1.6
+# Version: 1.1.7
 #
 # State: Functional
 #
-# Last modified 19.05.2017 by Lars Frogner
+# Last modified 20.05.2017 by Lars Frogner
 #
 import numpy as np
 import matplotlib as mpl
@@ -324,8 +324,6 @@ class FluidVisualiser:
         # Indicate that data was saved in this instance
         self.hasSaved = True
 
-        if wasInterrupted: sys.exit()
-
     def animate_1D(self, quantity, folder='default', extent=[0, 1], anim_fps='auto', showDeviations=True, showParams=True, height=6, aspect=1.3, title='', save=False, anim_time='auto', video_fps=30, video_name='auto', snapshots=None, units={}):
 
         'Creates an animation of the time evolution of a 1D simulation.'
@@ -379,7 +377,7 @@ class FluidVisualiser:
 
         # Create plot for fluid
         line, = ax.plot(self.l, q(), animated=self.use_blit)
-        if self.use_blit and not save_snaps: ax.cla()
+        if self.use_blit and not (save or save_snaps): ax.cla()
 
         # Add figure info
         textbox1, textbox2, textbox3 = self.__prepare_text(ax)
@@ -915,7 +913,7 @@ class FluidVisualiser:
 
             video_name += '.mp4'
 
-            animation = matplotlib.animation.FuncAnimation(fig, update, blit=self.use_blit, frames=N_frames)
+            animation = matplotlib.animation.FuncAnimation(fig, update, blit=False, frames=N_frames)
 
             self.t0 = time.time()
 
