@@ -15,7 +15,7 @@ the saving and visualisation of calculated data.
 All these actions can be done with just a few function calls in your main program.
 
 #### Installation
-Just download [FVis.py](/src/FVis.py) (in the linked page, click 'Raw' and then right-click => Save as..) to your working directory and you are good to go.
+Download [FVis3.py](/src/FVis3.py) (if you are using Python 3.x) or [FVis2.py](/src/FVis2.py) (if you are using Python 2.x) to your working directory and you are good to go. (In the linked page, click 'Raw' and then right-click => Save as..)
 
 #### Usage
 Check out the [User guide](/User-guide/FVis_user_guide.pdf) for instructions on how to use the module.
