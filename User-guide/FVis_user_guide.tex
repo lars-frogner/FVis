@@ -75,9 +75,9 @@ For generating an mp4 file from an animation, \href{https://ffmpeg.org/}{FFmpeg}
 \label{sec:start}
 Download \ttt{FVis.py} from \url{https://github.com/lars-frogner/FVis} and save it to your working directory. At the top of your code, import the module by calling
 \begin{lstlisting}
-import FVis
+import FVis3 as FVis
 \end{lstlisting}
-If you are also importing \ttt{matplotlib.pyplot}, make sure that the import of \ttt{FVis} comes first. Then, below all your simulation code, create an instance of the visualisation class by writing
+Replace the \ttt{3} with \ttt{2} if you are using Python \ttt{2.x} instead of Python \ttt{3.x}. If you are also importing \ttt{matplotlib.pyplot}, make sure that the import of \ttt{FVis} comes first. Then, below all your simulation code, create an instance of the visualisation class by writing
 \begin{lstlisting}
 vis = FVis.FluidVisualiser()
 \end{lstlisting}

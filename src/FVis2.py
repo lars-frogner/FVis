@@ -4,8 +4,6 @@
 #
 # Version: 1.1.7
 #
-# State: Functional
-#
 # Last modified 20.05.2017 by Lars Frogner
 #
 import numpy as np
